@@ -33,6 +33,7 @@ export const WorkAuthorizationSchema = z.object({
 }).default({})
 
 export const GovernmentComplianceSchema = z.object({
+  not_applicable: bool(false),
   is_former_government_employee: bool(false),
   clearance_level: str(),
   export_control_status: str(),
@@ -51,9 +52,73 @@ export const ConsentsSchema = z.object({
   opt_in_sms_notifications: bool(false),
 }).default({})
 
+/** Preset values for "How did you hear about us?" — first entry is the fill default. */
+export const SOURCE_ATTRIBUTION_PRESETS = [
+  'Company career page',
+  'LinkedIn',
+  'Indeed',
+  'Referral',
+  'Job board',
+] as const
+
+export const SOURCE_ATTRIBUTION_DEFAULT = SOURCE_ATTRIBUTION_PRESETS[0]
+
 export const SourceAttributionSchema = z.object({
-  how_did_you_hear_about_us: str(),
+  // Empty strings in saved YAML backfill to the default on read.
+  how_did_you_hear_about_us: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().default(SOURCE_ATTRIBUTION_DEFAULT),
+  ),
 }).default({})
+
+/** Preset values for voluntary EEO demographics — aligned with common Greenhouse/Lever forms. */
+export const GENDER_IDENTITY_PRESETS = [
+  'Woman',
+  'Man',
+  'Non-binary',
+  'Prefer not to say',
+] as const
+
+export const TRANSGENDER_STATUS_PRESETS = [
+  'Yes',
+  'No',
+  'Prefer not to say',
+] as const
+
+export const RACE_ETHNICITY_PRESETS = [
+  'American Indian or Alaska Native',
+  'Asian',
+  'Black or African American',
+  'Hispanic or Latino',
+  'Native Hawaiian or Other Pacific Islander',
+  'White',
+  'Two or more races',
+  'Prefer not to say',
+] as const
+
+export const SEXUAL_ORIENTATION_PRESETS = [
+  'Heterosexual / Straight',
+  'Gay or Lesbian',
+  'Bisexual',
+  'Asexual',
+  'Another orientation',
+  'Prefer not to say',
+] as const
+
+export const VETERAN_STATUS_PRESETS = [
+  'I am a protected veteran',
+  'I am not a protected veteran',
+  'Prefer not to say',
+] as const
+
+export const DISABILITY_STATUS_PRESETS = [
+  'Yes, I have a disability (or had one in the past)',
+  'No, I do not have a disability',
+  'Prefer not to say',
+] as const
+
+/** Shown in the controller when a stored value is not a known preset. */
+export const VOLUNTARY_DEMOGRAPHICS_OTHER = 'Other'
 
 /**
  * Sensitive. `opt_in` gates whether the extension is allowed to fill any of

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { ProfileSchema, emptyProfile } from './profile.js'
+import {
+  ProfileSchema,
+  SOURCE_ATTRIBUTION_DEFAULT,
+  emptyProfile,
+} from './profile.js'
 
 describe('ProfileSchema', () => {
   it('fills every section with defaults from an empty object', () => {
@@ -14,6 +18,11 @@ describe('ProfileSchema', () => {
   it('defaults demographics opt-in to false because the data is sensitive', () => {
     const p = ProfileSchema.parse({})
     expect(p.applicant_profile.voluntary_demographics.opt_in).toBe(false)
+  })
+
+  it('defaults government compliance not_applicable to false', () => {
+    const p = ProfileSchema.parse({})
+    expect(p.applicant_profile.government_compliance.not_applicable).toBe(false)
   })
 
   it('accepts a valid email and rejects a malformed one', () => {
@@ -49,5 +58,21 @@ describe('ProfileSchema', () => {
 
   it('emptyProfile() produces a value that parses cleanly', () => {
     expect(ProfileSchema.safeParse(emptyProfile()).success).toBe(true)
+  })
+
+  it('defaults source attribution to Company career page', () => {
+    const p = ProfileSchema.parse({})
+    expect(p.applicant_profile.source_attribution.how_did_you_hear_about_us).toBe(
+      SOURCE_ATTRIBUTION_DEFAULT,
+    )
+  })
+
+  it('backfills empty source attribution on parse', () => {
+    const p = ProfileSchema.parse({
+      applicant_profile: { source_attribution: { how_did_you_hear_about_us: '' } },
+    })
+    expect(p.applicant_profile.source_attribution.how_did_you_hear_about_us).toBe(
+      SOURCE_ATTRIBUTION_DEFAULT,
+    )
   })
 })
