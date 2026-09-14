@@ -46,3 +46,15 @@ export async function uploadResume(file: File): Promise<void> {
 
 export const deleteResume = (name: string) =>
   call<{ ok: true }>(`/api/resumes/${encodeURIComponent(name)}`, { method: 'DELETE' }).then(() => undefined)
+
+/** Multipart YAML import — bypasses `call` and its JSON content type. */
+export async function importProfileYaml(file: File): Promise<Profile> {
+  const body = new FormData()
+  body.append('file', file)
+  const res = await fetch('/api/profile/import', { method: 'POST', body })
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error((detail as { error?: string }).error ?? res.statusText)
+  }
+  return res.json() as Promise<Profile>
+}

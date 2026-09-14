@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 function readToken(): string {
+  // Same repo-root profile/ the server uses (see @jaf/server resolveDataDir).
   const p = resolve(__dirname, '../../profile/.token')
   try { return readFileSync(p, 'utf8').trim() }
   catch { console.warn(`[jaf] no token at ${p} — start @jaf/server first`); return '' }

@@ -1,6 +1,6 @@
 import type { Profile, WorkExperience } from '@jaf/shared'
 import { Section } from '../Section.js'
-import { TextField, BoolField } from '../Field.js'
+import { TextField, TextArea, BoolField } from '../Field.js'
 
 type WE = Profile['applicant_profile']['work_experience']
 
@@ -24,7 +24,7 @@ export function WorkExperienceList({ value, onChange }: { value: WE; onChange: (
             <TextField label="Start date"   value={row.start_date}   onChange={v => patch(i, { start_date: v })} placeholder="YYYY-MM" />
             <TextField label="End date"     value={row.end_date}     onChange={v => patch(i, { end_date: v })} placeholder="YYYY-MM or Present" />
             <BoolField  label="Current role" value={row.is_current_role} onChange={v => patch(i, { is_current_role: v })} />
-            <TextField label="Description"  value={row.description}  onChange={v => patch(i, { description: v })} />
+            <TextArea label="Description" value={row.description} onChange={v => patch(i, { description: v })} />
             <button type="button" onClick={() => onChange(value.filter((_, j) => j !== i))}
                     className="justify-self-start text-sm text-red-600">Remove</button>
           </div>
