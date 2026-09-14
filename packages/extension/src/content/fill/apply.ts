@@ -41,8 +41,17 @@ export function applyDecisions(fields: HarvestedField[], decisions: FillDecision
         ok = fillRadio(el as HTMLInputElement, d.value); break
       case 'checkbox':
         ok = fillCheckbox(el as HTMLInputElement, d.value); break
-      case 'combobox': case 'file':
-        return { ...base, outcome: 'needs-user', note: `${descriptor.kind} handled in a later milestone` }
+      case 'combobox':
+        // Many ATS widgets mark plain text inputs as comboboxes via ARIA. Try a
+        // normal text write first; only fall back when there is nothing to write.
+        if (!d.value.trim()) {
+          return { ...base, outcome: 'needs-user', note: 'no value in profile' }
+        }
+        ok = fillText(el as HTMLInputElement, d.value)
+        break
+      case 'file':
+        // Virtual resume/cover-letter fields have no string to attach.
+        return { ...base, outcome: 'needs-user', note: 'upload your file manually' }
     }
 
     if (!ok) return { ...base, outcome: 'failed', note: 'no matching option' }

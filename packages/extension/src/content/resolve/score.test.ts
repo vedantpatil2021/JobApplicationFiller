@@ -75,6 +75,12 @@ describe('resolveField', () => {
   it('respects the field kind — a file input is never matched to a text field', () => {
     expect(resolveField(field({ label: 'First Name', kind: 'file' }), profile())).toBeNull()
   })
+
+  it('matches a combobox-classified text input to a text canonical field', () => {
+    const d = resolveField(field({ label: 'First Name', kind: 'combobox' }), profile())
+    expect(d?.value).toBe('Ada')
+    expect(d!.confidence).toBeGreaterThanOrEqual(HIGH)
+  })
 })
 
 describe('resolveAll', () => {

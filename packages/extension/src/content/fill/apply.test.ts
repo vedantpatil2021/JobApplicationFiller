@@ -107,8 +107,46 @@ describe('end-to-end fill', () => {
   })
 
   it('reports a file input as needing the user, since upload lands in a later milestone', () => {
-    const { results } = run('<label for="cv">Resume</label><input id="cv" type="file" name="resume">')
-    expect(results.every(r => r.outcome !== 'filled')).toBe(true)
+    const doc = new DOMParser().parseFromString(
+      '<body><label for="cv">Resume</label><input id="cv" type="file" name="resume"></body>',
+      'text/html',
+    )
+    const fields = collectFields(doc, { checkLayout: false })
+    const results = applyDecisions(fields, [{
+      ref: fields[0].descriptor.ref,
+      value: 'resume.pdf',
+      confidence: 0.9,
+      source: 'heuristic',
+      canonicalKey: 'resume',
+      reason: 'test',
+    }])
+    expect(results[0]?.outcome).toBe('needs-user')
+    expect(results[0]?.note).toMatch(/upload/i)
+  })
+
+  it('fills a combobox-classified text input when the profile has a value', () => {
+    const html = '<label for="fn">First Name</label><input id="fn" aria-autocomplete="list" aria-controls="opts">'
+    const { doc, results } = run(html)
+    expect(valueOf(doc, '#fn')).toBe('Ada')
+    expect(results[0]?.outcome).toBe('filled')
+  })
+
+  it('reports needs-user when a combobox has no profile value to write', () => {
+    const doc = new DOMParser().parseFromString(
+      '<body><label for="li">LinkedIn</label><input id="li" aria-autocomplete="list"></body>',
+      'text/html',
+    )
+    const fields = collectFields(doc, { checkLayout: false })
+    const results = applyDecisions(fields, [{
+      ref: fields[0].descriptor.ref,
+      value: '',
+      confidence: 0.9,
+      source: 'heuristic',
+      canonicalKey: 'linkedin',
+      reason: 'test',
+    }])
+    expect(results[0]?.outcome).toBe('needs-user')
+    expect(results[0]?.note).toMatch(/no value in profile/i)
   })
 
   it('fills only the schema defaults from an otherwise empty profile', () => {

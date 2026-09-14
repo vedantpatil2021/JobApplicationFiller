@@ -1,6 +1,6 @@
 import {
   CANONICAL_FIELDS, valueAtPath,
-  type CanonicalField, type FieldDescriptor, type FillDecision, type Profile,
+  type CanonicalField, type FieldDescriptor, type FieldKind, type FillDecision, type Profile,
 } from '@jaf/shared'
 
 export const HIGH = 0.85
@@ -9,8 +9,14 @@ export const LOW = 0.5
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
 const tokens = (s: string) => new Set(norm(s).split(' ').filter(Boolean))
 
+/** ATS widgets often slap combobox ARIA on plain text inputs — still match text fields. */
+function kindMatches(descriptorKind: FieldDescriptor['kind'], allowed: FieldKind[]): boolean {
+  if (allowed.includes(descriptorKind)) return true
+  return descriptorKind === 'combobox' && allowed.includes('text')
+}
+
 function scoreAgainst(d: FieldDescriptor, f: CanonicalField): number {
-  if (!f.kinds.includes(d.kind)) return 0
+  if (!kindMatches(d.kind, f.kinds)) return 0
 
   const label = norm(d.label)
   const identity = norm(`${d.name ?? ''} ${d.id ?? ''}`)

@@ -1,3 +1,5 @@
+import { detectAts } from './detect/registry.js'
+
 /** SPA wizards change step without a navigation, so watch both the URL and the DOM. */
 export function watchForChanges(onChange: () => void): void {
   let lastUrl = location.href
@@ -9,7 +11,12 @@ export function watchForChanges(onChange: () => void): void {
   }
 
   new MutationObserver(() => {
-    if (location.href !== lastUrl) { lastUrl = location.href; fire() }
+    const href = location.href
+    const urlChanged = href !== lastUrl
+    if (urlChanged) lastUrl = href
+    // Lazy forms render after document_idle; retry once the page looks like an application.
+    const needsMount = !document.getElementById('jaf-root') && detectAts(href, document) !== null
+    if (urlChanged || needsMount) fire()
   }).observe(document, { subtree: true, childList: true })
 
   for (const method of ['pushState', 'replaceState'] as const) {
