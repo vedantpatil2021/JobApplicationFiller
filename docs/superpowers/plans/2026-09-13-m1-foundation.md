@@ -1241,6 +1241,9 @@ Expected: FAIL — `Cannot find module './api.js'`.
 ```ts
 import type { Profile } from '@jaf/shared'
 
+/** One uploaded resume. Task 9 reuses this type; do not redeclare it there. */
+export interface Resume { name: string; size: number }
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
@@ -1257,7 +1260,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 export const getProfile   = () => call<Profile>('/api/profile')
 export const putProfile   = (p: Profile) => call<{ ok: true }>('/api/profile', { method: 'PUT', body: JSON.stringify(p) }).then(() => undefined)
 export const getHealth    = () => call<{ ok: boolean }>('/api/health')
-export const listResumes  = () => call<{ resumes: { name: string; size: number }[] }>('/api/resumes').then(r => r.resumes)
+export const listResumes  = () => call<{ resumes: Resume[] }>('/api/resumes').then(r => r.resumes)
 ```
 
 - [ ] **Step 6: Write a minimal App so the page renders**
@@ -1337,6 +1340,27 @@ reviewable.
 npm i -D -w @jaf/controller @testing-library/react @testing-library/user-event @testing-library/jest-dom
 ```
 
+Installing `jest-dom` is not enough — its matchers (`toBeInTheDocument` and
+friends) only exist if Vitest loads it before each suite. Create
+`packages/controller/src/test-setup.ts`:
+
+```ts
+import '@testing-library/jest-dom/vitest'
+```
+
+and point Vitest at it. In `packages/controller/vite.config.ts`, replace the
+`test` block written in Task 6:
+
+```ts
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
+  },
+```
+
+Every controller test from here on depends on this. Tasks 9, 10 and 11 assume
+it is already done.
+
 - [ ] **Step 2: Write the failing test**
 
 `packages/controller/src/routes/ProfilePage.test.tsx`:
@@ -1346,12 +1370,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { emptyProfile } from '@jaf/shared'
-import ProfilePage from './ProfilePage.js'
+import { ProfilePage } from './ProfilePage.js'
 import * as api from '../lib/api.js'
 
+// `vi.spyOn(api, …)` cannot redefine a live ESM export — it throws. `spy: true`
+// wraps every export in a spy that keeps the real implementation, which
+// `vi.mocked` can then override per test.
+vi.mock('../lib/api.js', { spy: true })
+
 beforeEach(() => {
-  vi.spyOn(api, 'getProfile').mockResolvedValue(emptyProfile())
-  vi.spyOn(api, 'putProfile').mockResolvedValue(undefined)
+  vi.restoreAllMocks()
+  vi.mocked(api.getProfile).mockResolvedValue(emptyProfile())
+  vi.mocked(api.putProfile).mockResolvedValue(undefined)
 })
 
 describe('ProfilePage', () => {
@@ -1554,7 +1584,7 @@ import { Consents } from '../components/profile/Consents.js'
 import { SourceAttribution } from '../components/profile/SourceAttribution.js'
 import { VoluntaryDemographics } from '../components/profile/VoluntaryDemographics.js'
 
-export default function ProfilePage() {
+export function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [status, setStatus] = useState('')
 
@@ -1918,7 +1948,6 @@ export interface Status {
   tools: { claude: ToolInfo; codex: ToolInfo }
 }
 export interface ToolInfo { installed: boolean; version: string }
-export interface Resume { name: string; size: number }
 
 export const getStatus  = () => call<Status>('/api/status')
 export const getPairing = () => call<{ token: string; serverUrl: string }>('/api/pairing')
@@ -2083,11 +2112,16 @@ import userEvent from '@testing-library/user-event'
 import { ResumesPage } from './ResumesPage.js'
 import * as api from '../lib/api.js'
 
+// `vi.spyOn(api, …)` cannot redefine a live ESM export — it throws. `spy: true`
+// wraps every export in a spy that keeps the real implementation, which
+// `vi.mocked` can then override per test.
+vi.mock('../lib/api.js', { spy: true })
+
 beforeEach(() => {
   vi.restoreAllMocks()
-  vi.spyOn(api, 'listResumes').mockResolvedValue([{ name: 'cv.pdf', size: 2048 }])
-  vi.spyOn(api, 'uploadResume').mockResolvedValue(undefined)
-  vi.spyOn(api, 'deleteResume').mockResolvedValue(undefined)
+  vi.mocked(api.listResumes).mockResolvedValue([{ name: 'cv.pdf', size: 2048 }])
+  vi.mocked(api.uploadResume).mockResolvedValue(undefined)
+  vi.mocked(api.deleteResume).mockResolvedValue(undefined)
 })
 
 describe('ResumesPage', () => {
@@ -2098,7 +2132,7 @@ describe('ResumesPage', () => {
   })
 
   it('tells the user what to do when there are none yet', async () => {
-    vi.spyOn(api, 'listResumes').mockResolvedValue([])
+    vi.mocked(api.listResumes).mockResolvedValue([])
     render(<ResumesPage onChange={() => {}} />)
     expect(await screen.findByText(/no resumes yet/i)).toBeInTheDocument()
   })
@@ -2115,7 +2149,7 @@ describe('ResumesPage', () => {
   })
 
   it('shows the server error when an upload is refused, in plain language', async () => {
-    vi.spyOn(api, 'uploadResume').mockRejectedValue(new Error('bad filename or unsupported type'))
+    vi.mocked(api.uploadResume).mockRejectedValue(new Error('bad filename or unsupported type'))
     render(<ResumesPage onChange={() => {}} />)
     await screen.findByText('cv.pdf')
 
@@ -2301,9 +2335,13 @@ const status = (over: Partial<Status> = {}): Status => ({
   ...over,
 })
 
+// See Task 10: spying on a live ESM export throws, so mock the module with
+// `spy: true` and drive it through `vi.mocked`.
+vi.mock('../lib/api.js', { spy: true })
+
 beforeEach(() => {
   vi.restoreAllMocks()
-  vi.spyOn(api, 'getPairing').mockResolvedValue({ token: 'abc123', serverUrl: 'http://127.0.0.1:4321' })
+  vi.mocked(api.getPairing).mockResolvedValue({ token: 'abc123', serverUrl: 'http://127.0.0.1:4321' })
 })
 
 describe('SetupPage', () => {
@@ -2357,7 +2395,7 @@ describe('SetupPage', () => {
   })
 
   it('surfaces a pairing fetch failure instead of showing a blank box', async () => {
-    vi.spyOn(api, 'getPairing').mockRejectedValue(new Error('401'))
+    vi.mocked(api.getPairing).mockRejectedValue(new Error('401'))
     render(<SetupPage status={status()} onRetry={() => {}} />)
     await waitFor(() => expect(screen.getByText(/couldn.t read the token/i)).toBeInTheDocument())
   })
@@ -2495,7 +2533,7 @@ git add -A && git commit -m "feat(controller): setup page with pairing token, in
 **Files:**
 - Create: `README.md`
 - Modify: root `package.json` — add the `dev` script
-- Create: `packages/server/package.json` script check (verify `dev` exists)
+- Verify: `packages/server/package.json` and `packages/controller/package.json` each already have a `dev` script (Tasks 2 and 6 created them)
 
 **Interfaces:**
 - Consumes: the workspace scripts from Tasks 1, 2 and 6.
@@ -2504,7 +2542,7 @@ git add -A && git commit -m "feat(controller): setup page with pairing token, in
 - [ ] **Step 1: Add concurrently and the root dev script**
 
 ```bash
-npm install -D -w . concurrently@^9.1.0
+npm install -D concurrently@^9.1.0
 ```
 
 Add to the root `package.json` `scripts`:
@@ -2694,21 +2732,27 @@ fills a password, payment or Social Security field, and never fills the
 voluntary EEO questions unless you explicitly opt in.
 ````
 
-- [ ] **Step 4: Check the README against reality**
+- [ ] **Step 4: Commit**
+
+Commit before the clean-clone check — a clone only carries committed files, so
+verifying first would test a repo with no README in it.
+
+```bash
+git add -A && git commit -m "docs: README with quick and detailed setup, plus one-command dev script"
+```
+
+- [ ] **Step 5: Check the README against reality**
 
 Walk the Quick setup on a clean clone in a temp folder. Every command must run
 as written and every URL must load. Fix the README, not your memory of it.
 
 ```bash
-git clone . /tmp/jaf-readme-check && cd /tmp/jaf-readme-check && npm install && npm test
+git clone . /tmp/jaf-readme-check
+cd /tmp/jaf-readme-check && npm install && npm test
+cd - && rm -rf /tmp/jaf-readme-check
 ```
 
-- [ ] **Step 5: Commit**
-
-```bash
-cd -
-git add -A && git commit -m "docs: README with quick and detailed setup, plus one-command dev script"
-```
+If the walkthrough finds a problem, fix the README and amend the commit.
 
 ---
 
