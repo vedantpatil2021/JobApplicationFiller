@@ -1,0 +1,12 @@
+---
+description: Project instructions for Job Application Filler
+alwaysApply: true
+---
+
+Read `AGENTS.md` at the repository root before doing anything. It is the
+canonical instruction file shared by Cursor, Claude Code and Codex.
+
+Then read `docs/STATE.md` to find out where the last session stopped, and
+update it before you finish.
+
+Do not duplicate rules into this file — it exists only to point at `AGENTS.md`.
