@@ -299,6 +299,7 @@ git add -A && git commit -m "feat(shared): field descriptor contract and canonic
 - Create: `packages/extension/src/options/index.html`, `options.tsx`
 - Create: `packages/extension/src/lib/storage.ts`
 - Test: `packages/extension/src/lib/storage.test.ts`
+- Modify: root `package.json` — append `&& npm run build -w @jaf/extension` to `scripts.build`. M1 omitted it because this package did not exist yet.
 
 **Interfaces:**
 - Consumes: `Profile` from `@jaf/shared`.

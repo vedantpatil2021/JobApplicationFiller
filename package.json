@@ -2,10 +2,18 @@
   "name": "job-application-filler",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*"],
-  "engines": { "node": ">=22" },
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm run dev -w @jaf/server\" \"npm run dev -w @jaf/controller\"",
     "test": "npm run test --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build -w @jaf/shared && npm run build -w @jaf/controller"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
   }
 }

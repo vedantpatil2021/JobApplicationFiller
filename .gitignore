@@ -1,7 +1,9 @@
-profile/
 node_modules/
 dist/
 .superpowers/
-!profile/.gitkeep
+# Only the repo-root user-data folder. A bare `profile/` also matches
+# packages/controller/src/components/profile/ and would drop the editor UI from git.
+/profile/*
+!/profile/.gitkeep
 .env
 *.log

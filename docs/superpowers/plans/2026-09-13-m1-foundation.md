@@ -78,11 +78,16 @@ Root `package.json`:
 
 `.gitignore`:
 
+A bare `profile/` matches **any** directory of that name, including
+`packages/controller/src/components/profile/` (Task 7), and git will not
+re-include files inside an ignored directory. Anchor to the repo root:
+
 ```
 node_modules/
 dist/
-profile/
-!profile/.gitkeep
+.superpowers/
+/profile/*
+!/profile/.gitkeep
 .env
 *.log
 ```
@@ -99,7 +104,7 @@ profile/
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": { ".": "./src/index.ts" },
-  "scripts": { "test": "vitest run" },
+  "scripts": { "test": "vitest run", "build": "tsc --noEmit" },
   "dependencies": { "zod": "^3.23.8" },
   "devDependencies": { "vitest": "^2.1.8", "typescript": "^5.7.2" }
 }
@@ -108,7 +113,7 @@ profile/
 `packages/shared/tsconfig.json`:
 
 ```json
-{ "extends": "../../tsconfig.base.json", "include": ["src"] }
+{ "extends": "../../tsconfig.base.json", "include": ["src"], "exclude": ["src/**/*.test.ts"] }
 ```
 
 `packages/shared/vitest.config.ts`:
@@ -591,6 +596,11 @@ describe('auth middleware', () => {
 })
 ```
 
+Also add a `describe('CORS lock')` in the same file covering: controller origin
+reflected, chrome-extension origin reflected, foreign origin withheld, and
+OPTIONS preflight succeeding **without** `X-JAF-Token` (the `cors` middleware
+must terminate OPTIONS before `requireToken`).
+
 - [ ] **Step 2: Run it and watch it fail**
 
 ```bash
@@ -795,7 +805,8 @@ describe('PUT /api/profile', () => {
   })
 
   it('rejects an invalid profile with 400 and does not write it', async () => {
-    const bad = emptyProfile() as any
+    const bad = emptyProfile()
+    // Valid TypeScript (email is a string) but rejected by the zod email check.
     bad.applicant_profile.personal_information.email = 'not-an-email'
     const res = await auth(request(app).put('/api/profile')).send(bad).expect(400)
     expect(res.body.error).toBe('validation failed')
@@ -1433,6 +1444,8 @@ Expected: FAIL — `Cannot find module './ProfilePage.js'`.
 `packages/controller/src/components/Field.tsx`:
 
 ```tsx
+import { useId } from 'react'
+
 interface TextFieldProps {
   label: string
   value: string
@@ -1443,7 +1456,8 @@ interface TextFieldProps {
 }
 
 export function TextField({ label, value, onChange, type = 'text', disabled, placeholder }: TextFieldProps) {
-  const id = `f-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+  // Label-derived ids collide once there are two work-experience rows.
+  const id = useId()
   return (
     <label htmlFor={id} className="block text-sm">
       <span className="mb-1 block font-medium text-neutral-700">{label}</span>
@@ -1457,7 +1471,7 @@ export function TextField({ label, value, onChange, type = 'text', disabled, pla
 }
 
 export function BoolField({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
-  const id = `f-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+  const id = useId()
   return (
     <label htmlFor={id} className="flex items-center gap-2 text-sm">
       <input id={id} type="checkbox" checked={value} onChange={e => onChange(e.target.checked)} />
@@ -2551,11 +2565,14 @@ Add to the root `package.json` `scripts`:
 {
   "scripts": {
     "dev": "concurrently -n server,web -c blue,green \"npm run dev -w @jaf/server\" \"npm run dev -w @jaf/controller\"",
-    "build": "npm run build -w @jaf/shared && npm run build -w @jaf/controller && npm run build -w @jaf/extension",
+    "build": "npm run build -w @jaf/shared && npm run build -w @jaf/controller",
     "test": "npm test --workspaces --if-present"
   }
 }
 ```
+
+Do **not** add `@jaf/extension` to `build` in M1 — that package does not exist
+yet. M2 Task 1 appends it.
 
 - [ ] **Step 2: Verify it starts both**
 
@@ -2588,7 +2605,6 @@ You need [Node 22+](https://nodejs.org) and Chrome.
 git clone <your-repo-url> job-application-filler
 cd job-application-filler
 npm install
-npm run build -w @jaf/extension
 npm run dev
 ```
 
@@ -2597,10 +2613,10 @@ Then:
 1. Open <http://localhost:5173>.
 2. Fill in the **Profile** tab and click **Save**.
 3. Add your CV in the **Resumes** tab.
-4. Go to the **Setup** tab and follow the five steps there to load the
-   extension and paste the pairing token.
 
-Open any Greenhouse or Lever job application and click **Fill application**.
+That is enough to persist a profile. The Chrome extension (load it, paste the
+pairing token) is the next milestone — skip those Setup-tab steps until
+`packages/extension` exists.
 
 Everything after this point is detail you only need if something goes wrong.
 
@@ -2626,7 +2642,7 @@ claude login
 ### 2. Install and start
 
 ```bash
-npm install          # installs all four workspaces
+npm install          # installs the workspaces
 npm run dev          # starts the server and the web page together
 ```
 
@@ -2642,6 +2658,9 @@ of your profile, so autofill still works if you stop them — it just will not
 see edits you make after that.
 
 ### 3. Build and load the extension
+
+This step needs `packages/extension`, which arrives in milestone 2. Skip it
+until that package exists; the Profile and Resumes tabs work without it.
 
 ```bash
 npm run build -w @jaf/extension
@@ -2712,8 +2731,8 @@ web page can add, change and delete everything in it.
 |---|---|
 | `npm run dev` | Start the server and web page |
 | `npm test` | Run every test in the project |
-| `npm run build` | Build the web page and the extension |
-| `npm run build -w @jaf/extension` | Rebuild just the extension after changing it |
+| `npm run build` | Typecheck shared and build the web page |
+| `npm run build -w @jaf/extension` | Rebuild the extension (milestone 2) |
 
 ## Layout
 
@@ -2722,7 +2741,7 @@ packages/
 ├── shared/      profile schema and field types, used by everything
 ├── server/      Express server, owns your data on disk
 ├── controller/  the React web page
-└── extension/   the Chrome extension
+└── extension/   the Chrome extension (milestone 2)
 ```
 
 ## What it will not do
