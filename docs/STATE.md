@@ -6,29 +6,30 @@ this file.
 
 - **Last updated:** 2026-09-14
 - **Branch:** `m1-foundation`
-- **Last commit:** `ebefbbd` (docs only — M1 code is still uncommitted)
-- **Current milestone:** M1 — Foundation (reviewed and patched; still uncommitted)
+- **Last commit:** `7df17ca` (M1 committed and pushed to origin)
+- **Current milestone:** M1 complete. M2 is next.
+- **Remote:** `origin` → github.com/vedantpatil2021/JobApplicationFiller
+- **Trunk:** `main`. Milestone work happens on its own branch, then merges to `main`.
 - **Plan in force:** `docs/superpowers/plans/2026-09-13-m1-foundation.md`
 
 ## Next up
 
-**Commit M1 when the user asks, then start M2 Task 1.**
+**Start M2 Task 1.**
 
-M1 is implemented, reviewed, and green. Do not start M2 until M1 is committed.
-When you do start M2, open
+M1 is implemented, reviewed, green (69 tests) and pushed. Open
 `docs/superpowers/plans/2026-09-13-m2-m3-extension-autofill.md` at **Task 1:
 Field contract in shared** (not the extension scaffold — that is Task 2).
 Task 2 must also append `@jaf/extension` to the root `build` script; M1 left
 it off because the package does not exist yet.
 
-Nothing has been committed since `ebefbbd`. The working tree holds the full M1
-stack plus the review fixes below. The user rule is: do not commit unless asked.
+Branch from `main` for M2. The user rule still stands: do not commit unless
+asked, and never push without being asked.
 
 ## Milestones
 
 | # | Milestone | Plan | Status |
 |---|---|---|---|
-| M1 | Foundation — server, storage, controller, self-service UI, README | `plans/2026-09-13-m1-foundation.md` | **done, reviewed, uncommitted** |
+| M1 | Foundation — server, storage, controller, self-service UI, README | `plans/2026-09-13-m1-foundation.md` | **done, green, pushed** (`7df17ca`) |
 | M2 | Extension skeleton — detection, sticky button, sync | `plans/2026-09-13-m2-m3-extension-autofill.md` | planned |
 | M3 | Fill engine — harvest, resolve, fill on Greenhouse + Lever | same file | planned |
 | M4 | Claude CLI bridge — AI fallback, answer cache | not written yet | — |
