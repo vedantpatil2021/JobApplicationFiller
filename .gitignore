@@ -5,5 +5,8 @@ dist/
 # packages/controller/src/components/profile/ and would drop the editor UI from git.
 /profile/*
 !/profile/.gitkeep
+# Safety net: a server started with the wrong cwd writes a data dir next to a
+# workspace. That is a bug, but a leaked pairing token must never be the cost.
+/packages/*/profile/
 .env
 *.log

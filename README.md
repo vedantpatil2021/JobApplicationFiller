@@ -17,6 +17,7 @@ You need [Node 22+](https://nodejs.org) and Chrome.
 git clone <your-repo-url> job-application-filler
 cd job-application-filler
 npm install
+npm run build -w @jaf/extension
 npm run dev
 ```
 
@@ -25,10 +26,13 @@ Then:
 1. Open <http://localhost:5173>.
 2. Fill in the **Profile** tab and click **Save**.
 3. Add your CV in the **Resumes** tab.
+4. Open `chrome://extensions`, turn on **Developer mode**, click **Load
+   unpacked** and select `packages/extension/dist`.
+5. Back in the web page, open the **Setup** tab and click **Copy token**. On
+   `chrome://extensions`, open **Details → Extension options** for Job
+   Application Filler, paste the token and click **Save and test**.
 
-That is enough to persist a profile. The Chrome extension (load it, paste the
-pairing token) is the next milestone — skip those Setup-tab steps until
-`packages/extension` exists.
+Open a job application and click **Fill application**.
 
 Everything after this point is detail you only need if something goes wrong.
 
@@ -70,9 +74,6 @@ of your profile, so autofill still works if you stop them — it just will not
 see edits you make after that.
 
 ### 3. Build and load the extension
-
-This step needs `packages/extension`, which arrives in milestone 2. Skip it
-until that package exists; the Profile and Resumes tabs work without it.
 
 ```bash
 npm run build -w @jaf/extension
@@ -129,7 +130,8 @@ web page can add, change and delete everything in it.
 
 | Symptom | Fix |
 |---|---|
-| Web page says "Can't reach the server" | Run `npm run dev`, then reload the page |
+| Web page says "Can't reach the server" | Run `npm run dev` from the **project root**, then reload the page |
+| Setup tab says "Couldn't read the token" while both processes are running | Restart `npm run dev` so the server writes `profile/.token` at the project root (not under `packages/server`). Reload the Setup tab. |
 | Extension options says `Server said 401` | Token is wrong — copy it again from the Setup tab |
 | Extension options can't reach the server | The server is not running, or a firewall is blocking `127.0.0.1:4321` |
 | No **Fill application** button on a job page | That page was not recognised as an application. Open the extension's Options page to confirm pairing, then reload the job page |
@@ -143,8 +145,8 @@ web page can add, change and delete everything in it.
 |---|---|
 | `npm run dev` | Start the server and web page |
 | `npm test` | Run every test in the project |
-| `npm run build` | Typecheck shared and build the web page |
-| `npm run build -w @jaf/extension` | Rebuild the extension (milestone 2) |
+| `npm run build` | Typecheck shared, build the web page and the extension |
+| `npm run build -w @jaf/extension` | Rebuild just the extension, then press Reload on `chrome://extensions` |
 
 ## Layout
 
@@ -153,7 +155,7 @@ packages/
 ├── shared/      profile schema and field types, used by everything
 ├── server/      Express server, owns your data on disk
 ├── controller/  the React web page
-└── extension/   the Chrome extension (milestone 2)
+└── extension/   the Chrome extension
 ```
 
 ## What it will not do
