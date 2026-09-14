@@ -1,11 +1,11 @@
-import { resolve } from 'node:path'
 import { ensureToken } from './auth.js'
 import { createApp } from './app.js'
+import { resolveDataDir } from './data-dir.js'
 
 const PORT = 4321
 const HOST = '127.0.0.1'   // loopback only — never 0.0.0.0
 
-const dataDir = resolve(process.cwd(), process.env.JAF_DATA_DIR ?? './profile')
+const dataDir = resolveDataDir()
 const token = await ensureToken(dataDir)
 
 createApp({ dataDir, token }).listen(PORT, HOST, () => {
