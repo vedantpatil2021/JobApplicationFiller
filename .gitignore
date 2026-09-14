@@ -2,3 +2,6 @@ profile/
 node_modules/
 dist/
 .superpowers/
+!profile/.gitkeep
+.env
+*.log
