@@ -594,7 +594,9 @@ describe('syncProfile', () => {
   })
 
   it('sends the pairing token', async () => {
-    const spy = vi.fn(async () => new Response(JSON.stringify(emptyProfile()), { status: 200 }))
+    // Typed args, or `spy.mock.calls[0][1]` is a zero-length tuple under tsc.
+    const spy = vi.fn(async (_url: string, _init?: RequestInit) =>
+      new Response(JSON.stringify(emptyProfile()), { status: 200 }))
     vi.stubGlobal('fetch', spy)
     await syncProfile()
     const init = spy.mock.calls[0][1] as RequestInit
@@ -803,6 +805,14 @@ const RULES: Rule[] = [
 
 const APPLY_HINT = /\b(apply|application|resume|cv|cover letter|submit your)\b/i
 
+/**
+ * Our own controller and server. The controller is titled "Job Application
+ * Filler" and is nothing but form controls, so the generic fallback would
+ * happily offer to fill the user's profile editor with their own profile.
+ */
+const OWN_PORTS = new Set(['5173', '4321'])
+const OWN_HOSTS = new Set(['localhost', '127.0.0.1'])
+
 /** A login form is not an application, no matter how many inputs it has. */
 function looksLikeLogin(doc: Document): boolean {
   return doc.querySelector('input[type="password"]') !== null
@@ -819,7 +829,15 @@ function looksLikeApplication(doc: Document): boolean {
 export function detectAts(url: string, doc: Document): AtsMatch | null {
   let host = ''
   let path = ''
-  try { const u = new URL(url); host = u.hostname; path = u.pathname } catch { /* treat as no match */ }
+  let port = ''
+  try {
+    const u = new URL(url)
+    host = u.hostname
+    path = u.pathname
+    port = u.port
+  } catch { /* treat as no match */ }
+
+  if (OWN_HOSTS.has(host) && OWN_PORTS.has(port)) return null
 
   for (const rule of RULES) {
     if (rule.url.test(host)) return { id: rule.id, confidence: 1 }
@@ -961,9 +979,18 @@ export function isFillable(el: Element, opts: { checkLayout?: boolean } = {}): b
   if (el.hasAttribute('hidden')) return false
   if (el.getAttribute('aria-hidden') === 'true') return false
 
-  const identity = `${input.name ?? ''} ${el.id ?? ''} ${el.getAttribute('autocomplete') ?? ''}`
-  if (FORBIDDEN_NAME.test(identity)) return false
+  // Tested per attribute, not on a joined string: FORBIDDEN_NAME anchors some
+  // patterns to the whole value (^nickname$), which a joined string never matches.
+  const identity = [input.name ?? '', el.id ?? '', el.getAttribute('autocomplete') ?? '']
+  if (identity.some(part => FORBIDDEN_NAME.test(part.trim()))) return false
 
+  const inline = (el as HTMLElement).style
+  if (inline.display === 'none' || inline.visibility === 'hidden' || inline.opacity === '0') {
+    return false
+  }
+
+  // Class-based hiding needs computed style. A document built by DOMParser has
+  // no defaultView, so this is unavailable in tests and inline style is all we get.
   const style = el.ownerDocument.defaultView?.getComputedStyle(el)
   if (style && (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0')) {
     return false
@@ -1085,8 +1112,21 @@ describe('collectFields', () => {
 
 `packages/extension/src/content/harvest/descriptor.ts`:
 
+jsdom does not implement `CSS.escape`, so every selector built from a `name`
+or `id` goes through `escapeAttrValue` from `src/lib/selector.ts` instead, and
+`aria-labelledby` uses `[id="…"]` rather than `#id` so a leading digit needs no
+special handling:
+
+```ts
+/** packages/extension/src/lib/selector.ts */
+export function escapeAttrValue(value: string): string {
+  return value.replace(/["\\]/g, ch => `\\${ch}`)
+}
+```
+
 ```ts
 import type { FieldDescriptor, FieldKind } from '@jaf/shared'
+import { escapeAttrValue } from '../../lib/selector.js'
 
 const clean = (s: string | null | undefined) =>
   (s ?? '').replace(/[*•]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -1095,7 +1135,7 @@ export function resolveLabel(el: HTMLElement): string {
   const root = el.getRootNode() as Document | ShadowRoot
 
   if (el.id) {
-    const explicit = root.querySelector(`label[for="${CSS.escape(el.id)}"]`)
+    const explicit = root.querySelector(`label[for="${escapeAttrValue(el.id)}"]`)
     if (explicit?.textContent) return clean(explicit.textContent)
   }
 
@@ -1105,7 +1145,7 @@ export function resolveLabel(el: HTMLElement): string {
   const labelledBy = el.getAttribute('aria-labelledby')
   if (labelledBy) {
     const text = labelledBy.split(/\s+/)
-      .map(id => root.querySelector(`#${CSS.escape(id)}`)?.textContent ?? '')
+      .map(id => root.querySelector(`[id="${escapeAttrValue(id)}"]`)?.textContent ?? '')
       .join(' ')
     if (clean(text)) return clean(text)
   }
@@ -1182,6 +1222,7 @@ export function describeField(el: HTMLElement, ref: string, sectionIndex = 0): F
 import type { FieldDescriptor } from '@jaf/shared'
 import { isFillable } from './visibility.js'
 import { describeField, resolveLabel } from './descriptor.js'
+import { escapeAttrValue } from '../../lib/selector.js'
 
 export interface HarvestedField { el: HTMLElement; descriptor: FieldDescriptor }
 
@@ -1233,7 +1274,7 @@ export function collectFields(
       seenRadioGroups.add(group)
 
       const peers = Array.from(root.querySelectorAll<HTMLInputElement>(
-        `input[type="radio"][name="${CSS.escape(input.name)}"]`,
+        `input[type="radio"][name="${escapeAttrValue(input.name)}"]`,
       ))
       const label = resolveLabel(el.closest('fieldset') ?? el)
       const descriptor = describeField(el, `r${n++}`, nextIndex(label))
@@ -1684,6 +1725,8 @@ describe('fillText truncation', () => {
 `packages/extension/src/content/fill/setters.ts`:
 
 ```ts
+import { escapeAttrValue } from '../../lib/selector.js'
+
 const AFFIRMATIVE = /^(yes|true|i agree|agree|accept|1)$/i
 
 /**
@@ -1737,7 +1780,7 @@ export function fillSelect(el: HTMLSelectElement, value: string): boolean {
 export function fillRadio(el: HTMLInputElement, value: string): boolean {
   const root = el.getRootNode() as Document | ShadowRoot
   const peers = el.name
-    ? Array.from(root.querySelectorAll<HTMLInputElement>(`input[type="radio"][name="${CSS.escape(el.name)}"]`))
+    ? Array.from(root.querySelectorAll<HTMLInputElement>(`input[type="radio"][name="${escapeAttrValue(el.name)}"]`))
     : [el]
 
   const v = norm(value)

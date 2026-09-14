@@ -703,14 +703,14 @@ export function createApp(opts: AppOptions): express.Express {
 `packages/server/src/index.ts`:
 
 ```ts
-import { resolve } from 'node:path'
 import { ensureToken } from './auth.js'
 import { createApp } from './app.js'
+import { resolveDataDir } from './data-dir.js'
 
 const PORT = 4321
 const HOST = '127.0.0.1'   // loopback only — never 0.0.0.0
 
-const dataDir = resolve(process.cwd(), process.env.JAF_DATA_DIR ?? './profile')
+const dataDir = resolveDataDir()
 const token = await ensureToken(dataDir)
 
 createApp({ dataDir, token }).listen(PORT, HOST, () => {
@@ -720,6 +720,13 @@ createApp({ dataDir, token }).listen(PORT, HOST, () => {
   console.log(`\nPaste the token into the extension options page to pair it.`)
 })
 ```
+
+Default data dir is the **repo-root** `profile/` folder, resolved from
+`import.meta.url` in `data-dir.ts` — not `process.cwd()`. Workspace scripts
+(`npm run dev -w @jaf/server`) set cwd to `packages/server`, so a cwd-relative
+`./profile` writes `.token` where the Vite proxy (`../../profile/.token` from
+the controller) cannot read it. `JAF_DATA_DIR` still overrides. Tests pass
+`dataDir` into `createApp` explicitly and must keep doing that.
 
 - [ ] **Step 6: Run tests until green**
 
@@ -1082,8 +1089,9 @@ git commit -m "feat(server): resume upload, list, download and delete"
 - Consumes: `Profile` from `@jaf/shared`.
 - Produces: `getProfile(): Promise<Profile>`, `putProfile(p: Profile): Promise<void>`, `getHealth(): Promise<{ ok: boolean }>`, `listResumes(): Promise<{ name: string; size: number }[]>`.
 
-The browser never sees the token. The Vite dev server reads `profile/.token`
-and injects the header when proxying `/api`.
+The browser never sees the token. The Vite dev server reads the **repo-root**
+`profile/.token` (same file `resolveDataDir()` writes) and injects the header
+when proxying `/api`. Do not read `packages/server/profile/.token`.
 
 - [ ] **Step 1: Create the package**
 
@@ -2717,7 +2725,8 @@ web page can add, change and delete everything in it.
 
 | Symptom | Fix |
 |---|---|
-| Web page says "Can't reach the server" | Run `npm run dev`, then reload the page |
+| Web page says "Can't reach the server" | Run `npm run dev` from the **project root**, then reload the page |
+| Setup tab says "Couldn't read the token" while both processes are running | Restart `npm run dev` so the server writes `profile/.token` at the project root (not under `packages/server`). Reload the Setup tab. Do not paste the terminal token into the browser extensions list — the extension is milestone 2. |
 | Extension options says `Server said 401` | Token is wrong — copy it again from the Setup tab |
 | Extension options can't reach the server | The server is not running, or a firewall is blocking `127.0.0.1:4321` |
 | No **Fill application** button on a job page | That page was not recognised as an application. Open the extension's Options page to confirm pairing, then reload the job page |
