@@ -5,6 +5,7 @@ import { healthRouter } from './routes/health.js'
 import { profileRouter } from './routes/profile.js'
 import { resumeRouter } from './routes/resume.js'
 import { statusRouter } from './routes/status.js'
+import { aiRouter } from './routes/ai.js'
 
 export interface AppOptions { dataDir: string; token: string }
 
@@ -29,6 +30,7 @@ export function createApp(opts: AppOptions): express.Express {
   app.use('/api', profileRouter(opts.dataDir))
   app.use('/api', resumeRouter(opts.dataDir))
   app.use('/api', statusRouter(opts.dataDir, opts.token))
+  app.use('/api', aiRouter(opts.dataDir))
 
   return app
 }
