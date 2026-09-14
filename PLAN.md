@@ -46,6 +46,16 @@ Every task in every plan inherits these. Copied verbatim from the spec.
 - `README.md` carries a Quick setup (clone to working, no explanation) and a
   Detailed setup (prerequisites, each step, data location, troubleshooting).
 
+**Multi-tool development**
+- Development happens across Claude Code, Cursor and Codex. `AGENTS.md` is the
+  canonical instruction file for all three; `CLAUDE.md` and
+  `.cursor/rules/project.mdc` only point at it. Never fork rules into them.
+- `docs/STATE.md` is the committed handoff record. Read it before starting,
+  update it in the same commit as your work. An unrecorded session is a
+  session the next tool repeats.
+- `.superpowers/` is gitignored and Claude-Code-only. It is never the handoff
+  record.
+
 **Conventions**
 - Port `4321` server, `5173` controller.
 - Package names: `@jaf/shared`, `@jaf/server`, `@jaf/controller`,
