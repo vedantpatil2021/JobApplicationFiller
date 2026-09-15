@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { emptyProfile, type FieldDescriptor } from '@jaf/shared'
-import { mapFieldsViaServer } from './ai.js'
+import { mapFieldsViaServer, requestMapFields } from './ai.js'
 import { setSettings } from './storage.js'
 
 const field: FieldDescriptor = {
@@ -35,5 +35,25 @@ describe('mapFieldsViaServer', () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('ECONNREFUSED') }))
     const r = await mapFieldsViaServer([field], emptyProfile(), '')
     expect(r.error).toMatch(/could not reach/i)
+  })
+
+  it('explains a 401 as an unpaired extension', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () =>
+      new Response(JSON.stringify({ error: 'bad or missing X-JAF-Token' }), { status: 401 })))
+    const r = await mapFieldsViaServer([field], emptyProfile(), '')
+    expect(r.error).toMatch(/not paired/i)
+  })
+})
+
+describe('requestMapFields', () => {
+  it('routes through the background worker', async () => {
+    const sendMessage = vi.fn(async () => ({
+      answers: [{ ref: 'q1', value: 'Hi', confidence: 0.9, source: 'ai' }],
+    }))
+    vi.stubGlobal('chrome', { runtime: { sendMessage } })
+
+    const r = await requestMapFields([field], emptyProfile(), 'JD')
+    expect(r.answers[0].value).toBe('Hi')
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'jaf.map-fields' }))
   })
 })

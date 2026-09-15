@@ -4,11 +4,11 @@ import {
 } from '@jaf/shared'
 import type { HarvestedField } from './harvest/collect.js'
 import { applyDecisions } from './fill/apply.js'
-import { mapFieldsViaServer } from '../lib/ai.js'
+import { requestMapFields } from '../lib/ai.js'
 import { scrapeJobDescription } from './job-description.js'
 
 const AI_KINDS = new Set<FieldDescriptor['kind']>([
-  'text', 'textarea', 'select', 'radio', 'checkbox', 'date',
+  'text', 'textarea', 'select', 'radio', 'checkbox', 'date', 'combobox',
 ])
 
 export function isAiEligible(d: FieldDescriptor): boolean {
@@ -45,10 +45,8 @@ export async function fillWithAi(
 
   for (const d of deferred) {
     const note = d.kind === 'file'
-      ? 'upload your file manually'
-      : d.kind === 'combobox'
-        ? 'no matching profile value'
-        : 'no confident match'
+      ? 'Unsupported file field — attach manually'
+      : 'no confident match'
     results.push({
       ref: d.ref, label: d.label, outcome: 'needs-user', value: '',
       confidence: 0, source: 'heuristic', note,
@@ -67,7 +65,7 @@ export async function fillWithAi(
     return results
   }
 
-  const { answers, error } = await mapFieldsViaServer(
+  const { answers, error } = await requestMapFields(
     eligible, profile, scrapeJobDescription(doc),
   )
 

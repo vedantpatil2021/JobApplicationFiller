@@ -39,7 +39,11 @@ export function Widget() {
               <li key={r.ref} className="flex items-start justify-between gap-2 p-3">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{r.label || r.ref}</div>
-                  <div className="truncate text-neutral-500">{r.value || r.note}</div>
+                  <div className="truncate text-neutral-500">
+                    {r.outcome === 'filled'
+                      ? (r.note ? `${r.value || '—'} · ${r.note}` : (r.value || '—'))
+                      : (r.note || r.value || '—')}
+                  </div>
                 </div>
                 <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${BADGE[r.outcome]}`}>{r.outcome}</span>
               </li>
