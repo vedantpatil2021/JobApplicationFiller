@@ -17,6 +17,7 @@ async function fill(): Promise<FillResult[]> {
   const sync = await chrome.runtime.sendMessage({ type: 'jaf.sync' })
   const profile = sync?.profile
   const online = sync?.online ?? false
+  const syncReason = sync?.reason
   if (!profile) return []
 
   if (isWorkdaySignInGate(location.href, document)) {
@@ -36,7 +37,7 @@ async function fill(): Promise<FillResult[]> {
   results.push(...fileResults)
 
   if (remaining.length > 0) {
-    results.push(...await fillWithAi(fields, remaining, profile, document, online))
+    results.push(...await fillWithAi(fields, remaining, profile, document, online, syncReason))
   }
   return results
 }
