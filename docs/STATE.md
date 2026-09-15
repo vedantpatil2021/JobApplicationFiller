@@ -4,15 +4,14 @@
 first and updates it last. If it disagrees with `git log`, git is right: fix
 this file.
 
-- **Last updated:** 2026-09-15 (M4.6 merged and pushed; M4.7 resolver
-  false-positive fixes green on `fix/resolver-false-positives`)
-- **Branch:** `fix/resolver-false-positives` (not yet merged — see "Next up")
-- **Last commit:** see `git log --oneline -5`. M4.6 is on `main` (merge
-  commit `c4e0797`, pushed). Do not push unless asked.
+- **Last updated:** 2026-09-15 (M4.6 + M4.7 merged and pushed; brand logo
+  applied across extension/controller/README, also pushed)
+- **Branch:** `main`, clean, up to date with `origin/main` at `83adf2a`.
+- **Last commit:** see `git log --oneline -6`. Do not push unless asked.
 - **Current milestone:** M4.6 **done, merged, pushed**. M4.7 (resolver
   false-positive fixes, from a user-supplied screenshot of the same live
-  test) **done, green, not yet merged**. M4.5 (live recon) written but not
-  yet run. M5 still blocked on live DOM in `docs/ats/findings.md`.
+  test) **done, merged, pushed**. M4.5 (live recon) written but not yet run.
+  M5 still blocked on live DOM in `docs/ats/findings.md`.
 - **Remote:** `origin` → github.com/vedantpatil2021/JobApplicationFiller
 - **Trunk:** `main`. Milestone work happens on its own branch, then merges to `main`.
 - **Plan in force:** `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`
@@ -25,22 +24,38 @@ this file.
 for routine implementation work** — not Opus. Reserve heavier models for
 architecture decisions, hard debugging, or when the user explicitly asks.
 
+## Brand logo (2026-09-15)
+
+User supplied `assets/brand/logo.png` (1254x1254, opaque white background) —
+kept as the single source of truth, resized copies generated with `sips`
+into each package. Applied everywhere on `main` at `83adf2a`:
+
+- Extension manifest `icons` + `action.default_icon` (16/32/48/128 in
+  `packages/extension/public/icons/`).
+- Content-script widget's Fill button is icon-only now (was text) — uses
+  `chrome.runtime.getURL('icons/icon-48.png')`, **not** a plain path, since
+  the button renders inside the host page's own document. Manifest needed
+  `web_accessible_resources` for `icons/*.png` to allow that.
+- Options page favicon (`packages/extension/src/options/favicon-48.png`).
+- Controller header (`App.tsx`) and favicon (`packages/controller/public/`).
+- README, top of file.
+
+If the logo is ever replaced: swap `assets/brand/logo.png`, then regenerate
+every derived size the same way — `sips -z <W> <H> assets/brand/logo.png
+--out <dest>` — rather than hand-editing any of the derived PNGs.
+
 ## Next up
 
-**Merge `fix/resolver-false-positives` to `main`, then run
-`docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`.**
+**Run `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`.** M4.6 and
+M4.7 are both merged and pushed; nothing is blocking this.
 
-1. Finish and merge the `fix/resolver-false-positives` branch (M4.7) — three
-   tasks, all jsdom-green, not yet on `main`. `fix/m4.6-repair` (M4.6) is
-   already merged and pushed.
-2. Follow `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`: Task 2 uses
-   Codex (`gpt-5.6-tera`, `--search`) to find real, verifiable Greenhouse and
-   Lever postings; Task 4 drives an actual browser against the repaired
-   extension and records results. Specifically re-check the Hispanic/Latino
-   field (or whatever demographic field is closest) to find the real
-   mechanism behind the "Columbus" bug — M4.7's fix stops it from writing,
-   but doesn't yet know why it happened.
-3. Only after that pass has real rows, write
+1. Task 2 uses Codex (`gpt-5.6-tera`, `--search`) to find real, verifiable
+   Greenhouse and Lever postings; Task 4 drives an actual browser against
+   the repaired extension and records results. Specifically re-check the
+   Hispanic/Latino field (or whatever demographic field is closest) to find
+   the real mechanism behind the "Columbus" bug — M4.7's fix stops it from
+   writing, but doesn't yet know why it happened.
+2. Only after that pass has real rows, write
    `docs/superpowers/plans/<date>-m5-adapters.md` from them — do not invent
    Workday/iCIMS/etc. selectors.
 
