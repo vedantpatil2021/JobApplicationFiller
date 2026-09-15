@@ -6,7 +6,8 @@ this file.
 
 - **Last updated:** 2026-09-14 (M4 live-test fixes + fill correctness committed)
 - **Branch:** `main`
-- **Last commit:** `5b31ec6` docs: STATE and findings updates for M4 live-test fixes. Do not push unless asked.
+- **Last commit:** see `git log --oneline -5` — M4 live-test fixes
+  (`49de3da`, `d7cf601`, `c1e7ca1`, `5b31ec6`). Do not push unless asked.
 - **Current milestone:** M4 **code complete and green in tests**. M3 live browser
   pass still outstanding. M5 blocked on live DOM in `docs/ats/findings.md`.
 - **Remote:** `origin` → github.com/vedantpatil2021/JobApplicationFiller
