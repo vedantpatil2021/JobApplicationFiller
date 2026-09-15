@@ -198,4 +198,33 @@ describe('end-to-end fill', () => {
     applyDecisions(fields, decisions)
     expect(doc.querySelector<HTMLInputElement>('#c')!.value).toBe('India')
   })
+
+  it('refuses to write a non-yes/no value into a yes/no-phrased question — live-test finding', () => {
+    const html = '<label for="eeo">Are you Hispanic or Latino?</label><input id="eeo">'
+    const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+    const fields = collectFields(doc, { checkLayout: false })
+    const results = applyDecisions(fields, [{
+      ref: fields[0].descriptor.ref,
+      value: 'Columbus',       // an AI/resolver mismatch, not a real yes/no answer
+      confidence: 0.9,
+      source: 'ai',
+      canonicalKey: null,
+      reason: 'test',
+    }])
+    expect(results[0]?.outcome).toBe('needs-user')
+    expect(doc.querySelector<HTMLInputElement>('#eeo')!.value).toBe('')
+    expect(results[0]?.note).toMatch(/yes\/no/i)
+  })
+
+  it('still fills a yes/no-phrased question when the value actually is yes/no', () => {
+    const html = '<label for="eeo">Are you Hispanic or Latino?</label><input id="eeo">'
+    const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+    const fields = collectFields(doc, { checkLayout: false })
+    const results = applyDecisions(fields, [{
+      ref: fields[0].descriptor.ref,
+      value: 'No', confidence: 0.9, source: 'ai', canonicalKey: null, reason: 'test',
+    }])
+    expect(results[0]?.outcome).toBe('filled')
+    expect(doc.querySelector<HTMLInputElement>('#eeo')!.value).toBe('No')
+  })
 })

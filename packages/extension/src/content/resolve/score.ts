@@ -46,7 +46,13 @@ function scoreAgainst(d: FieldDescriptor, f: CanonicalField): number {
   for (const syn of f.synonyms) {
     const s = norm(syn)
     if (label === s) { best = Math.max(best, 0.95); continue }
-    if (label.includes(s)) {
+    // A multi-word synonym is specific enough that a plain substring match is
+    // strong evidence. A single generic word (e.g. "name", "city") appearing
+    // anywhere in a longer, unrelated question is not — a live-test finding
+    // (M4.7) showed this filled a conditional "please list their name"
+    // referral question with the applicant's own full name. Single-word
+    // synonyms still get a chance below, via identity and weak token overlap.
+    if (s.includes(' ') && label.includes(s)) {
       // A long synonym covering most of the label is stronger evidence than a
       // short one buried in a long question. Weight by coverage so the best
       // synonym wins on merit rather than on registry order.
@@ -58,14 +64,19 @@ function scoreAgainst(d: FieldDescriptor, f: CanonicalField): number {
     }
   }
 
-  // Token overlap catches wording the synonym list did not anticipate.
-  if (best === 0 && label) {
+  // Token overlap catches single-word synonyms (skipped above) and wording
+  // the synonym list did not anticipate. Score by how much of the LABEL's
+  // distinct tokens are explained by ANY synonym of this field, combined —
+  // a short label fully covered by its synonyms ("Resume/CV" against
+  // resume/cv) is strong evidence; one generic word out of many unrelated
+  // ones in a long question ("...please list their name" against "name")
+  // is weak evidence, even though it's a perfect match for that one word.
+  if (best < LOW && label) {
     const lt = tokens(label)
-    for (const syn of f.synonyms) {
-      const st = tokens(syn)
-      const hits = [...st].filter(t => lt.has(t)).length
-      if (hits > 0) best = Math.max(best, 0.4 + 0.3 * (hits / st.size))
-    }
+    const synTokens = new Set<string>()
+    for (const syn of f.synonyms) for (const t of tokens(syn)) synTokens.add(t)
+    const covered = [...lt].filter(t => synTokens.has(t)).length
+    if (covered > 0) best = Math.max(best, 0.4 + 0.5 * (covered / lt.size))
   }
 
   return best

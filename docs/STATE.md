@@ -4,16 +4,20 @@
 first and updates it last. If it disagrees with `git log`, git is right: fix
 this file.
 
-- **Last updated:** 2026-09-15 (M4.6 repair complete, green, on `fix/m4.6-repair`)
-- **Branch:** `fix/m4.6-repair` (not yet merged to `main` — see "Next up")
-- **Last commit:** see `git log --oneline -5` — M4.6 repair
-  (`b48be41`, `599d0cb`, `ccefde0`, `e54a2d5`). Do not push unless asked.
-- **Current milestone:** M4.6 **done, green, committed**. M4.5 (live recon)
-  written but not yet run. M5 still blocked on live DOM in
-  `docs/ats/findings.md`.
+- **Last updated:** 2026-09-15 (M4.6 merged and pushed; M4.7 resolver
+  false-positive fixes green on `fix/resolver-false-positives`)
+- **Branch:** `fix/resolver-false-positives` (not yet merged — see "Next up")
+- **Last commit:** see `git log --oneline -5`. M4.6 is on `main` (merge
+  commit `c4e0797`, pushed). Do not push unless asked.
+- **Current milestone:** M4.6 **done, merged, pushed**. M4.7 (resolver
+  false-positive fixes, from a user-supplied screenshot of the same live
+  test) **done, green, not yet merged**. M4.5 (live recon) written but not
+  yet run. M5 still blocked on live DOM in `docs/ats/findings.md`.
 - **Remote:** `origin` → github.com/vedantpatil2021/JobApplicationFiller
 - **Trunk:** `main`. Milestone work happens on its own branch, then merges to `main`.
 - **Plan in force:** `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`
+  (M4.7 was bounded bug-fixing, root-caused in chat — no separate plan file;
+  see `docs/ats/findings.md` → "M4.7" for the full record)
 
 ## Agent preferences
 
@@ -23,15 +27,19 @@ architecture decisions, hard debugging, or when the user explicitly asks.
 
 ## Next up
 
-**Merge `fix/m4.6-repair` to `main` (via `superpowers:finishing-a-development-branch`),
-then run `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`.**
+**Merge `fix/resolver-false-positives` to `main`, then run
+`docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`.**
 
-1. Finish and merge the `fix/m4.6-repair` branch — four bug fixes, all
-   jsdom-green, not yet on `main`.
+1. Finish and merge the `fix/resolver-false-positives` branch (M4.7) — three
+   tasks, all jsdom-green, not yet on `main`. `fix/m4.6-repair` (M4.6) is
+   already merged and pushed.
 2. Follow `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`: Task 2 uses
    Codex (`gpt-5.6-tera`, `--search`) to find real, verifiable Greenhouse and
    Lever postings; Task 4 drives an actual browser against the repaired
-   extension and records results.
+   extension and records results. Specifically re-check the Hispanic/Latino
+   field (or whatever demographic field is closest) to find the real
+   mechanism behind the "Columbus" bug — M4.7's fix stops it from writing,
+   but doesn't yet know why it happened.
 3. Only after that pass has real rows, write
    `docs/superpowers/plans/<date>-m5-adapters.md` from them — do not invent
    Workday/iCIMS/etc. selectors.
@@ -71,14 +79,31 @@ Root-caused from a live test on a real Greenhouse posting this session (see
 | 3 | Claude CLI isolation (`--strict-mcp-config`) + spec §5 correction | done — `599d0cb`, 1 test |
 | 4 | Combobox lazy-listbox expansion (`expandComboboxes`) | done — `b48be41`, 4 tests |
 
+## M4.7 tasks
+
+Found from a user-supplied screenshot of the same live posting, on branch
+`fix/resolver-false-positives` (not yet merged):
+
+| # | Task | Status |
+|---|---|---|
+| 1 | Resolver: single-word synonyms no longer win on a bare substring match; score by label-token coverage across all of a field's synonyms combined | done — 2 new tests + fixed a regression in the existing `matchVirtualField` "Resume/CV" test |
+| 2 | `isImplausibleYesNoAnswer()` — refuse a non-yes/no value into a yes/no-phrased label | done — new `content/fill/plausibility.ts`, 4 tests |
+| 3 | Wire the plausibility guard into `applyDecisions` for text/textarea/combobox kinds | done — 2 new tests in `apply.test.ts` |
+
+Not yet diagnosed: *why* the Hispanic/Latino field specifically got
+"Columbus" — needs live DOM. The guard stops it from being written
+regardless of cause; the M4.5 live-recon pass should try to find the real
+mechanism.
+
 ## Test and build state
 
-`npm test` at the repo root — **249 passing** (was 238 before M4.6):
+`npm test` at the repo root — **257 passing** (238 before M4.6, 249 after
+M4.6, 257 after M4.7):
 
 | Workspace | Tests |
 |---|---|
 | `@jaf/controller` | 37 |
-| `@jaf/extension` | 135 |
+| `@jaf/extension` | 143 |
 | `@jaf/server` | 61 |
 | `@jaf/shared` | 16 |
 
