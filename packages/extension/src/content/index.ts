@@ -2,6 +2,7 @@ import type { FillResult } from '@jaf/shared'
 import { detectAts } from './detect/registry.js'
 import { isWorkdaySignInGate } from './detect/signin-gate.js'
 import { collectFields } from './harvest/collect.js'
+import { expandComboboxes } from './harvest/expand-combobox.js'
 import { resolveAll } from './resolve/score.js'
 import { applyDecisions } from './fill/apply.js'
 import { fillWithAi } from './ai-fill.js'
@@ -29,6 +30,7 @@ async function fill(): Promise<FillResult[]> {
   }
 
   const fields = collectFields(document)
+  await expandComboboxes(fields)
   const { decisions, unresolved } = resolveAll(fields.map(f => f.descriptor), profile)
 
   const results = applyDecisions(fields, decisions)
