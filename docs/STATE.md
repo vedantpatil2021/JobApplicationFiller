@@ -4,9 +4,9 @@
 first and updates it last. If it disagrees with `git log`, git is right: fix
 this file.
 
-- **Last updated:** 2026-09-14 (M4 committed, combobox/observer fix committed)
+- **Last updated:** 2026-09-14 (M4 live-test fixes + fill correctness committed)
 - **Branch:** `main`
-- **Last commit:** see `git log --oneline -5` — M4 series on `main`. Do not push unless asked.
+- **Last commit:** `c23e637` docs: STATE and findings updates for M4 live-test fixes. Do not push unless asked.
 - **Current milestone:** M4 **code complete and green in tests**. M3 live browser
   pass still outstanding. M5 blocked on live DOM in `docs/ats/findings.md`.
 - **Remote:** `origin` → github.com/vedantpatil2021/JobApplicationFiller
@@ -57,16 +57,18 @@ npm run build -w @jaf/extension
 | 3 | Claude CLI bridge + map-fields prompt | done — 6 tests |
 | 4 | Provider + `POST /api/ai/map-fields` | done — 6 tests |
 | 5 | Extension AI wiring + Workday sign-in gate | done — 7 tests |
-| 6 | Full test suite green | done — **215 tests** |
+| 6 | Full test suite green | done — **225 tests** |
+| 7 | Live-test fixes (AI routing, resume attach, UX notes) | done — `49de3da`, `c1e7ca1` |
+| 8 | Fill correctness (select/combobox/radio, resolver floor) | done — `d7cf601` |
 
 ## Test and build state
 
-`npm test` at the repo root — **215 passing**:
+`npm test` at the repo root — **238 passing**:
 
 | Workspace | Tests |
 |---|---|
 | `@jaf/controller` | 35 |
-| `@jaf/extension` | 104 |
+| `@jaf/extension` | 127 |
 | `@jaf/server` | 60 |
 | `@jaf/shared` | 16 |
 
@@ -77,8 +79,11 @@ Run `npm run build -w @jaf/extension` before loading in Chrome.
 - **`POST /api/ai/map-fields`** — batches unresolved fields, checks
   `profile/answers.json` cache, one Claude call per form, Codex fallback on
   auth/rate-limit errors.
-- **Extension** — after heuristics, eligible unresolved fields go to the server;
+- **Extension** — after heuristics, eligible unresolved fields go to the server
+  **via the background worker** (`requestMapFields` → `jaf.map-fields` message);
   confidence ≥ 0.6 fills with `source: 'ai'` or `'cache'`; offline shows plain error.
+- **Resume attach** — file inputs matched to the virtual `resume` canonical field
+  fetch the first file from `profile/resumes/` and attach via `DataTransfer`.
 - **Workday sign-in gate** — `isWorkdaySignInGate()` returns a single review row
   instead of filling a login page.
 - **Prompt injection guard** — job description wrapped in `<job_description>` tags.
@@ -89,19 +94,38 @@ Carried forward from prior sessions, plus M4:
 
 - **Combobox ARIA on plain text inputs** — Greenhouse/Lever often set
   `aria-autocomplete` / `aria-controls` on name, email, etc. The harvester
-  classifies those as `combobox`. Fixed 2026-09-14: resolver treats combobox
-  as compatible with text canonical fields; fill writes via `fillText` instead
-  of blanket `needs-user`.
+  classifies those as `combobox`. Plain comboboxes (no harvested options) still
+  fill via `fillText`. Comboboxes **with** listbox/datalist options pick from
+  the list via `fillCombobox` — never type free text that fails ATS validation.
 - **`needs-user` vs `failed`** — `needs-user` only when profile/resolver/AI
   cannot supply a value (empty profile field, file upload, Workday sign-in,
   AI miss/offline). `failed` when a value exists but cannot be applied (select
-  option mismatch). Combobox-with-value now fills as text where possible.
+  / combobox / radio option mismatch). Resolver returns null (→ AI or skip)
+  when profile value does not match any harvested option.
+- **Resolver confidence floor raised to 0.65** (was 0.5) — weak token-overlap
+  matches were pairing wrong canonical fields to unrelated DOM inputs. Choice
+  comboboxes (with options) no longer match text-only canonical fields.
+- **Apply-time guards** — skip hidden/disabled fields; skip fields that already
+  have a user-entered value before the first fill. `matchOption` uses word-
+  boundary prefix matching so "Yes" does not match "Yesterday".
 - **jsdom has no `CSS.escape`.** Use `escapeAttrValue` from
   `packages/extension/src/lib/selector.ts`.
 - **`--output-format json` on Claude CLI returns a JSON array**, not one object.
   Parser lives in `packages/server/src/ai/claude-cli.ts`.
 - **AI needs the server running and `claude login`.** Offline autofill still works
   for heuristic matches; AI rows show `server offline — AI unavailable`.
+- **AI must route through the background worker.** Content scripts run on the ATS
+  page origin; direct `fetch` to `/api/ai/map-fields` fails CORS. Fixed 2026-09-14:
+  `requestMapFields` sends `jaf.map-fields` to the service worker (same pattern as
+  `jaf.sync`).
+- **Combobox-classified custom questions now go to AI.** Greenhouse/Lever often mark
+  plain text inputs with `aria-autocomplete`; those were excluded from AI in M4.
+  AI answers are written via `fillText` (same as profile combobox fix).
+- **Review panel shows `note` for needs-user rows**, not an empty value — e.g.
+  `Claude is not logged in`, `Extension not paired`, `AI was not confident enough`.
+- **Resume upload:** first resume in `profile/resumes/` auto-attaches when the field
+  label matches resume/CV synonyms. Cover letter still manual. Rebuild extension
+  after pulling: `npm run build -w @jaf/extension`.
 - **M5 cannot start** until `docs/ats/findings.md` has live Greenhouse/Lever rows
   with real markup for failures. Do not invent Workday/iCIMS selectors.
 - Never gitignore bare `profile/` — use `/profile/*`.

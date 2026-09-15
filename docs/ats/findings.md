@@ -88,7 +88,9 @@ textarea; offline shows `server offline — AI unavailable`.
 
 | Gap | Closed by |
 |---|---|
-| Resume and cover-letter upload — `virtual` in the registry, no value to write | M5 |
+| Cover-letter upload — virtual field, not yet implemented | M5 |
+| Resume upload on exotic ATS widgets (shadow DOM, custom dropzones) | M5 |
+| Basic resume attach from `profile/resumes/` on standard `<input type="file">` | **done 2026-09-14** |
 | Comboboxes (address, school autocomplete) — classified, then reported `needs-user` | M5 |
 | Phone split across a country-code select and a number input | M5 |
 | Repeated work-experience blocks — `sectionIndex` is recorded but unused | M5 |
