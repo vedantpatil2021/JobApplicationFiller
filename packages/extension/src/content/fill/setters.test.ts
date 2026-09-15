@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { setNativeValue, fillText, fillSelect, fillRadio, fillCheckbox } from './setters.js'
+import {
+  setNativeValue, fillText, fillSelect, fillRadio, fillCheckbox,
+  fillCombobox, matchOption,
+} from './setters.js'
 
 const parse = (html: string) => new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
 
@@ -50,6 +53,39 @@ describe('fillSelect', () => {
   })
   it('refuses rather than picking the wrong option', () => {
     const s = sel(); expect(fillSelect(s, 'Atlantis')).toBe(false); expect(s.value).toBe('')
+  })
+
+  it('does not match "Yes" inside "Yesterday"', () => {
+    expect(matchOption('Yes', ['Yesterday', 'No'])).toBeNull()
+  })
+
+  it('does not match "No" inside unrelated words', () => {
+    expect(matchOption('No', ['Know', 'Not applicable'])).toBeNull()
+  })
+})
+
+describe('fillCombobox', () => {
+  it('picks a listbox option instead of typing free text', () => {
+    const doc = parse(`<label for="c">Country</label>
+      <input id="c" role="combobox" aria-controls="list">
+      <ul id="list" role="listbox">
+        <li role="option">India</li><li role="option">United States</li>
+      </ul>`)
+    const input = doc.querySelector('input')!
+    expect(fillCombobox(input, 'India', ['India', 'United States'])).toBe(true)
+    expect(input.value).toBe('India')
+  })
+
+  it('refuses when no option matches', () => {
+    const input = parse('<input role="combobox">').querySelector('input')!
+    expect(fillCombobox(input, 'Atlantis', ['India', 'United States'])).toBe(false)
+    expect(input.value).toBe('')
+  })
+
+  it('falls back to fillText when there are no options', () => {
+    const input = parse('<input aria-autocomplete="list">').querySelector('input')!
+    expect(fillCombobox(input, 'Ada', [])).toBe(true)
+    expect(input.value).toBe('Ada')
   })
 })
 

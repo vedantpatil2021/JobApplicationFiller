@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { emptyProfile, type FieldDescriptor } from '@jaf/shared'
-import { resolveField, resolveAll, HIGH, LOW } from './score.js'
+import { resolveField, resolveAll, matchVirtualField, HIGH, LOW } from './score.js'
 
 const field = (p: Partial<FieldDescriptor>): FieldDescriptor => ({
   ref: 'r0', kind: 'text', label: '', name: null, id: null, placeholder: null,
@@ -80,6 +80,42 @@ describe('resolveField', () => {
     const d = resolveField(field({ label: 'First Name', kind: 'combobox' }), profile())
     expect(d?.value).toBe('Ada')
     expect(d!.confidence).toBeGreaterThanOrEqual(HIGH)
+  })
+
+  it('refuses a combobox with options when the profile value is not listed', () => {
+    const p = profile()
+    p.applicant_profile.personal_information.address.country = 'Atlantis'
+    expect(resolveField(field({
+      label: 'Country', kind: 'combobox', options: ['India', 'United States'],
+    }), p)).toBeNull()
+  })
+
+  it('does not match a choice combobox to a text-only canonical field', () => {
+    // "name" token overlap could hit full_name — but this field has options, so only
+    // choice kinds apply; first_name is text-only.
+    expect(resolveField(field({
+      label: 'Your name please', kind: 'combobox', options: ['Mr', 'Ms', 'Dr'],
+    }), profile())).toBeNull()
+  })
+
+  it('resolves a combobox country field when the option exists', () => {
+    const p = profile()
+    p.applicant_profile.personal_information.address.country = 'India'
+    const d = resolveField(field({
+      label: 'Country', kind: 'combobox', options: ['India', 'United States'],
+    }), p)
+    expect(d?.value).toBe('India')
+    expect(d?.canonicalKey).toBe('country')
+  })
+})
+
+describe('matchVirtualField', () => {
+  it('recognises a resume upload field', () => {
+    expect(matchVirtualField(field({ label: 'Resume/CV', kind: 'file' }))).toBe('resume')
+  })
+
+  it('ignores unrelated file inputs', () => {
+    expect(matchVirtualField(field({ label: 'Portfolio sample', kind: 'file' }))).toBeNull()
   })
 })
 

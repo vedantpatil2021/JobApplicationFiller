@@ -1,10 +1,25 @@
-import type { FillDecision, FillResult } from '@jaf/shared'
+import type { FieldDescriptor, FillDecision, FillResult } from '@jaf/shared'
 import type { HarvestedField } from '../harvest/collect.js'
+import { escapeAttrValue } from '../../lib/selector.js'
+import { isFillable } from '../harvest/visibility.js'
 import { isSubmitControl } from './guard.js'
-import { fillText, fillSelect, fillRadio, fillCheckbox } from './setters.js'
+import { fillText, fillSelect, fillRadio, fillCheckbox, fillCombobox } from './setters.js'
 
 /** What we wrote, so a re-fill can tell our value from the user's edit. */
 const written = new WeakMap<HTMLElement, string>()
+
+function readValue(el: HTMLElement, kind: FieldDescriptor['kind']): string {
+  const input = el as HTMLInputElement
+  if (kind === 'radio') {
+    const root = el.getRootNode() as Document | ShadowRoot
+    const checked = root.querySelector<HTMLInputElement>(
+      `input[type="radio"][name="${escapeAttrValue(input.name)}"]:checked`,
+    )
+    return checked?.value ?? ''
+  }
+  if (kind === 'checkbox') return input.checked ? 'checked' : ''
+  return input.value ?? ''
+}
 
 export function applyDecisions(fields: HarvestedField[], decisions: FillDecision[]): FillResult[] {
   const byRef = new Map(fields.map(f => [f.descriptor.ref, f]))
@@ -20,15 +35,25 @@ export function applyDecisions(fields: HarvestedField[], decisions: FillDecision
     const base = { ref: d.ref, label: descriptor.label, value: d.value,
                    confidence: d.confidence, source: d.source }
 
+    if (!isFillable(el, { checkLayout: false })) {
+      return { ...base, outcome: 'skipped', note: 'hidden or disabled' }
+    }
+
     if (isSubmitControl(el)) {
       return { ...base, outcome: 'skipped', note: 'refused: submit control' }
     }
 
-    // The user edited this since we wrote it — leave their value alone.
+    const current = readValue(el, descriptor.kind)
     const prior = written.get(el)
-    const current = (el as HTMLInputElement).value
+
+    // The user edited this since we wrote it — leave their value alone.
     if (prior !== undefined && current !== prior) {
       return { ...base, outcome: 'skipped', note: 'you edited this' }
+    }
+
+    // Respect a value the user already entered before our first fill.
+    if (prior === undefined && current.trim() !== '') {
+      return { ...base, outcome: 'skipped', note: 'already has a value' }
     }
 
     let ok = false
@@ -42,21 +67,18 @@ export function applyDecisions(fields: HarvestedField[], decisions: FillDecision
       case 'checkbox':
         ok = fillCheckbox(el as HTMLInputElement, d.value); break
       case 'combobox':
-        // Many ATS widgets mark plain text inputs as comboboxes via ARIA. Try a
-        // normal text write first; only fall back when there is nothing to write.
         if (!d.value.trim()) {
           return { ...base, outcome: 'needs-user', note: 'no value in profile' }
         }
-        ok = fillText(el as HTMLInputElement, d.value)
+        ok = fillCombobox(el as HTMLInputElement, d.value, descriptor.options)
         break
       case 'file':
-        // Virtual resume/cover-letter fields have no string to attach.
-        return { ...base, outcome: 'needs-user', note: 'upload your file manually' }
+        return { ...base, outcome: 'needs-user', note: 'File upload — attach manually or re-run Fill' }
     }
 
     if (!ok) return { ...base, outcome: 'failed', note: 'no matching option' }
 
-    const finalValue = (el as HTMLInputElement).value
+    const finalValue = readValue(el, descriptor.kind) || (el as HTMLInputElement).value
     written.set(el, finalValue)
 
     // Spec §4.6: a value we had to cut short must be reviewed, never filled silently.

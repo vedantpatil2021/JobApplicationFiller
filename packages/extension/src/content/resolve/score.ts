@@ -2,21 +2,38 @@ import {
   CANONICAL_FIELDS, valueAtPath,
   type CanonicalField, type FieldDescriptor, type FieldKind, type FillDecision, type Profile,
 } from '@jaf/shared'
+import { matchOption } from '../fill/setters.js'
 
 export const HIGH = 0.85
-export const LOW = 0.5
+/** Raised from 0.5 — token-overlap weak matches were pairing wrong canonical fields. */
+export const LOW = 0.65
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
 const tokens = (s: string) => new Set(norm(s).split(' ').filter(Boolean))
 
+const CHOICE_KINDS = new Set<FieldKind>(['select', 'radio', 'combobox'])
+
+function hasChoiceOptions(d: FieldDescriptor): boolean {
+  return d.options.length > 0 && CHOICE_KINDS.has(d.kind)
+}
+
 /** ATS widgets often slap combobox ARIA on plain text inputs — still match text fields. */
-function kindMatches(descriptorKind: FieldDescriptor['kind'], allowed: FieldKind[]): boolean {
+function kindMatches(descriptorKind: FieldDescriptor['kind'], allowed: FieldKind[], withOptions: boolean): boolean {
   if (allowed.includes(descriptorKind)) return true
-  return descriptorKind === 'combobox' && allowed.includes('text')
+
+  if (descriptorKind === 'combobox') {
+    if (withOptions) {
+      return allowed.some(k => CHOICE_KINDS.has(k))
+    }
+    return allowed.includes('text')
+  }
+
+  return false
 }
 
 function scoreAgainst(d: FieldDescriptor, f: CanonicalField): number {
-  if (!kindMatches(d.kind, f.kinds)) return 0
+  const withOptions = hasChoiceOptions(d)
+  if (!kindMatches(d.kind, f.kinds, withOptions)) return 0
 
   const label = norm(d.label)
   const identity = norm(`${d.name ?? ''} ${d.id ?? ''}`)
@@ -54,18 +71,6 @@ function scoreAgainst(d: FieldDescriptor, f: CanonicalField): number {
   return best
 }
 
-/** For selects and radios, only an option that really exists can be used. */
-function matchOption(value: string, options: string[]): string | null {
-  if (options.length === 0) return value
-  const v = norm(value)
-  return (
-    options.find(o => norm(o) === v) ??
-    options.find(o => norm(o).startsWith(v)) ??
-    options.find(o => norm(o).includes(v)) ??
-    null
-  )
-}
-
 export function resolveField(d: FieldDescriptor, profile: Profile): FillDecision | null {
   let best: CanonicalField | null = null
   let bestScore = 0
@@ -86,7 +91,7 @@ export function resolveField(d: FieldDescriptor, profile: Profile): FillDecision
   try { value = valueAtPath(profile, best.path) } catch { return null }
   if (!value) return null
 
-  if (d.kind === 'select' || d.kind === 'radio') {
+  if (d.kind === 'select' || d.kind === 'radio' || (d.kind === 'combobox' && d.options.length > 0)) {
     const picked = matchOption(value, d.options)
     if (!picked) return null
     value = picked
@@ -112,4 +117,18 @@ export function resolveAll(descriptors: FieldDescriptor[], profile: Profile) {
     else unresolved.push(d)     // M4 hands these to the Claude CLI
   }
   return { decisions, unresolved }
+}
+
+/** Match a file input to a virtual canonical field (resume, cover letter). */
+export function matchVirtualField(d: FieldDescriptor): string | null {
+  if (d.kind !== 'file') return null
+
+  let best: CanonicalField | null = null
+  let bestScore = 0
+  for (const f of CANONICAL_FIELDS) {
+    if (!f.virtual) continue
+    const s = scoreAgainst(d, f)
+    if (s > bestScore) { bestScore = s; best = f }
+  }
+  return best && bestScore >= LOW ? best.key : null
 }

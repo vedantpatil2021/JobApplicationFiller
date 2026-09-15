@@ -55,6 +55,18 @@ describe('descriptor shape', () => {
   it('treats an input with a listbox role as a combobox', () => {
     expect(first('<input role="combobox" aria-label="State">').kind).toBe('combobox')
   })
+
+  it('harvests listbox options from aria-controls', () => {
+    const html = `<input id="c" role="combobox" aria-controls="list">
+      <ul id="list" role="listbox"><li role="option">India</li><li role="option">USA</li></ul>`
+    const d = first(html)
+    expect(d.options).toEqual(['India', 'USA'])
+  })
+
+  it('harvests datalist options', () => {
+    const html = `<input list="states"><datalist id="states"><option>CA</option><option>NY</option></datalist>`
+    expect(first(html).options).toEqual(['CA', 'NY'])
+  })
 })
 
 describe('collectFields', () => {

@@ -155,4 +155,47 @@ describe('end-to-end fill', () => {
     expect(results.filter(r => r.outcome === 'filled').map(r => r.label).sort())
       .toEqual(['Are you legally authorized to work?', 'How did you hear about us?'])
   })
+
+  it('skips a field the user already filled before the first run', () => {
+    const doc = new DOMParser().parseFromString(`<body>${FORM}</body>`, 'text/html')
+    doc.querySelector<HTMLInputElement>('#fn')!.value = 'Charles'
+    const fields = collectFields(doc, { checkLayout: false })
+    const { decisions } = resolveAll(fields.map(f => f.descriptor), profile())
+    const results = applyDecisions(fields, decisions)
+
+    expect(valueOf(doc, '#fn')).toBe('Charles')
+    const first = results.find(r => r.label === 'First Name')
+    expect(first?.outcome).toBe('skipped')
+    expect(first?.note).toBe('already has a value')
+  })
+
+  it('reports failed when a select value does not match any option', () => {
+    const html = `<label for="c">Country</label>
+      <select id="c"><option value="">Pick</option><option>India</option></select>`
+    const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+    const fields = collectFields(doc, { checkLayout: false })
+    const results = applyDecisions(fields, [{
+      ref: fields[0].descriptor.ref,
+      value: 'Atlantis',
+      confidence: 0.9,
+      source: 'heuristic',
+      canonicalKey: 'country',
+      reason: 'test',
+    }])
+    expect(results[0]?.outcome).toBe('failed')
+    expect(results[0]?.note).toMatch(/no matching option/i)
+  })
+
+  it('picks a combobox listbox option instead of typing garbage', () => {
+    const html = `<label for="c">Country</label>
+      <input id="c" role="combobox" aria-controls="list">
+      <ul id="list" role="listbox"><li role="option">India</li><li role="option">USA</li></ul>`
+    const p = profile()
+    p.applicant_profile.personal_information.address.country = 'India'
+    const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+    const fields = collectFields(doc, { checkLayout: false })
+    const { decisions } = resolveAll(fields.map(f => f.descriptor), p)
+    applyDecisions(fields, decisions)
+    expect(doc.querySelector<HTMLInputElement>('#c')!.value).toBe('India')
+  })
 })

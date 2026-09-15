@@ -50,23 +50,61 @@ export function classify(el: HTMLElement): FieldKind {
   if (type === 'date' || type === 'month') return 'date'
 
   const role = el.getAttribute('role')
-  if (role === 'combobox' || el.hasAttribute('aria-autocomplete') || el.hasAttribute('aria-controls')) {
+  if (role === 'combobox' || el.hasAttribute('aria-autocomplete')
+      || el.hasAttribute('aria-controls') || el.hasAttribute('list')) {
     return 'combobox'
   }
   return 'text'
 }
 
-export function describeField(el: HTMLElement, ref: string, sectionIndex = 0): FieldDescriptor {
-  const input = el as HTMLInputElement & HTMLSelectElement
-  const kind = classify(el)
+function harvestListboxOptions(root: Document | ShadowRoot, ids: string): string[] {
+  const out: string[] = []
+  for (const id of ids.split(/\s+/)) {
+    const lb = root.querySelector(`[id="${escapeAttrValue(id)}"]`)
+    if (!lb) continue
+    for (const opt of lb.querySelectorAll('[role="option"]')) {
+      const t = clean(opt.textContent)
+      if (t) out.push(t)
+    }
+  }
+  return out
+}
 
-  let options: string[] = []
+function harvestOptions(el: HTMLElement, kind: FieldKind): string[] {
+  const root = el.getRootNode() as Document | ShadowRoot
+
   if (kind === 'select') {
-    options = Array.from((el as HTMLSelectElement).options)
+    return Array.from((el as HTMLSelectElement).options)
       .map(o => clean(o.textContent))
       .filter(o => o.length > 0)
   }
 
+  if (kind !== 'combobox') return []
+
+  const options: string[] = []
+
+  const listId = el.getAttribute('list')
+  if (listId) {
+    const dl = root.querySelector(`datalist[id="${escapeAttrValue(listId)}"]`)
+    if (dl) {
+      for (const opt of dl.querySelectorAll('option')) {
+        const t = clean(opt.textContent || opt.getAttribute('value'))
+        if (t) options.push(t)
+      }
+    }
+  }
+
+  for (const attr of ['aria-controls', 'aria-owns'] as const) {
+    const ids = el.getAttribute(attr)
+    if (ids) options.push(...harvestListboxOptions(root, ids))
+  }
+
+  return [...new Set(options)]
+}
+
+export function describeField(el: HTMLElement, ref: string, sectionIndex = 0): FieldDescriptor {
+  const input = el as HTMLInputElement & HTMLSelectElement
+  const kind = classify(el)
   const maxLength = input.maxLength && input.maxLength > 0 ? input.maxLength : null
 
   return {
@@ -78,7 +116,7 @@ export function describeField(el: HTMLElement, ref: string, sectionIndex = 0): F
     placeholder: el.getAttribute('placeholder'),
     ariaLabel: el.getAttribute('aria-label'),
     autocomplete: el.getAttribute('autocomplete'),
-    options,
+    options: harvestOptions(el, kind),
     required: input.required || el.getAttribute('aria-required') === 'true',
     maxLength,
     sectionIndex,
