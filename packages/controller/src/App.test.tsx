@@ -50,4 +50,32 @@ describe('App shell', () => {
     })
     expect(screen.getByText(/npm run dev/i)).toBeInTheDocument()
   })
+
+  it('shows a checking state on the setup tab while a re-check is in flight', async () => {
+    let resolveStatus: (r: Response) => void = () => {}
+    const statusBody = {
+      ok: true, dataDir: '/tmp/profile', profileExists: true, resumeCount: 0,
+      tools: { claude: { installed: true, version: '2.1' }, codex: { installed: false, version: '' } },
+    }
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.includes('/api/status')) {
+        return new Promise<Response>(resolve => { resolveStatus = resolve })
+      }
+      const body =
+        url.includes('/api/profile') ? emptyProfile() :
+        url.includes('/api/resumes') ? { resumes: [] } :
+        { token: 'tok', serverUrl: 'http://127.0.0.1:4321' }
+      return new Response(JSON.stringify(body), { status: 200 })
+    }))
+
+    render(<App />)
+    await userEvent.click(screen.getByRole('tab', { name: /setup/i }))
+    await screen.findAllByText(/checking/i)       // first load, status still null
+
+    resolveStatus(new Response(JSON.stringify(statusBody), { status: 200 }))
+    await screen.findByText(/claude cli/i)
+
+    await userEvent.click(screen.getByRole('button', { name: /re-check/i }))
+    expect(screen.getByRole('button', { name: /checking/i })).toBeInTheDocument()
+  })
 })

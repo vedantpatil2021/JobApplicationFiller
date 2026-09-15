@@ -9,9 +9,23 @@ M4 (AI fallback for custom questions) does **not** need live DOM rows; it handle
 
 ## Status: awaiting the first live pass
 
-The engine is implemented and green in jsdom (98 tests in `@jaf/extension`),
+The engine is implemented and green in jsdom (135 tests in `@jaf/extension`),
 but **no live posting has been filled yet**. Nothing below the "Verified in
 jsdom" section is confirmed against a real page.
+
+## M4.6 repair — bugs found on the first live Greenhouse pass
+
+A live test surfaced four defects, all fixed in `docs/superpowers/plans/2026-09-15-m4.6-repair.md`:
+
+| Symptom | Root cause | Fixed by |
+|---|---|---|
+| AI "Re-check" button gave no feedback | `App.tsx` never showed a loading state after the first load | Task 1 |
+| AI fallback said "no service" for every failure | `syncProfile()` collapsed 401 / invalid-profile / network-down into one `online: false` | Task 2 |
+| No AI answers came back at all | `claude` CLI loaded the user's global MCP servers (including `pending`/`failed` ones) on every call — missing `--strict-mcp-config` | Task 3 |
+| "How did you hear about us?" dropdown filled with a value not in the list | `fillCombobox` typed free text whenever `options` was empty at harvest time, which is true for any listbox that renders on focus | Task 4 |
+
+M4.6 code is jsdom-green. **Still needs a live re-run** (M4.5) to confirm
+these fixes hold on the real posting and to capture the DOM rows below.
 
 ### Manual live test checklist
 

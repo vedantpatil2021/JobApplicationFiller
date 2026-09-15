@@ -2,6 +2,7 @@ import type { FillResult } from '@jaf/shared'
 import { detectAts } from './detect/registry.js'
 import { isWorkdaySignInGate } from './detect/signin-gate.js'
 import { collectFields } from './harvest/collect.js'
+import { expandComboboxes } from './harvest/expand-combobox.js'
 import { resolveAll } from './resolve/score.js'
 import { applyDecisions } from './fill/apply.js'
 import { fillWithAi } from './ai-fill.js'
@@ -17,6 +18,7 @@ async function fill(): Promise<FillResult[]> {
   const sync = await chrome.runtime.sendMessage({ type: 'jaf.sync' })
   const profile = sync?.profile
   const online = sync?.online ?? false
+  const syncReason = sync?.reason
   if (!profile) return []
 
   if (isWorkdaySignInGate(location.href, document)) {
@@ -28,6 +30,7 @@ async function fill(): Promise<FillResult[]> {
   }
 
   const fields = collectFields(document)
+  await expandComboboxes(fields)
   const { decisions, unresolved } = resolveAll(fields.map(f => f.descriptor), profile)
 
   const results = applyDecisions(fields, decisions)
@@ -36,7 +39,7 @@ async function fill(): Promise<FillResult[]> {
   results.push(...fileResults)
 
   if (remaining.length > 0) {
-    results.push(...await fillWithAi(fields, remaining, profile, document, online))
+    results.push(...await fillWithAi(fields, remaining, profile, document, online, syncReason))
   }
   return results
 }

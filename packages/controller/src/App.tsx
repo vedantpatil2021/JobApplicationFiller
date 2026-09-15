@@ -9,9 +9,14 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('profile')
   const [status, setStatus] = useState<Status | null>(null)
   const [offline, setOffline] = useState(false)
+  const [checking, setChecking] = useState(false)
 
   const refresh = () => {
-    getStatus().then(s => { setStatus(s); setOffline(false) }).catch(() => setOffline(true))
+    setChecking(true)
+    getStatus()
+      .then(s => { setStatus(s); setOffline(false) })
+      .catch(() => setOffline(true))
+      .finally(() => setChecking(false))
   }
   useEffect(refresh, [])
 
@@ -38,7 +43,7 @@ export default function App() {
       <div className="mt-6">
         {tab === 'profile' && <ProfilePage onChange={refresh} />}
         {tab === 'resumes' && <ResumesPage onChange={refresh} />}
-        {tab === 'setup' && <SetupPage status={status} onRetry={refresh} />}
+        {tab === 'setup' && <SetupPage status={status} checking={checking} onRetry={refresh} />}
       </div>
     </main>
   )

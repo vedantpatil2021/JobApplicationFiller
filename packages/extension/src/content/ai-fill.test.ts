@@ -42,14 +42,23 @@ describe('fillWithAi', () => {
     expect(results.some(r => r.outcome === 'filled')).toBe(true)
   })
 
-  it('reports needs-user when offline', async () => {
+  it('reports needs-user when offline, with an actionable reason', async () => {
     const doc = new DOMParser().parseFromString(`<body>${FORM}</body>`, 'text/html')
     const fields = collectFields(doc, { checkLayout: false })
     const unresolved = fields.map(f => f.descriptor)
 
     const results = await fillWithAi(fields, unresolved, emptyProfile(), doc, false)
     expect(results[0].outcome).toBe('needs-user')
-    expect(results[0].note).toMatch(/offline/i)
+    expect(results[0].note).toMatch(/npm run dev/i)
+  })
+
+  it('tells the user to re-pair when the sync failed on a 401', async () => {
+    const doc = new DOMParser().parseFromString(`<body>${FORM}</body>`, 'text/html')
+    const fields = collectFields(doc, { checkLayout: false })
+    const unresolved = fields.map(f => f.descriptor)
+
+    const results = await fillWithAi(fields, unresolved, emptyProfile(), doc, false, 'unauthorized')
+    expect(results[0].note).toMatch(/token/i)
   })
 
   it('reports needs-user only when profile and AI cannot supply an answer', async () => {

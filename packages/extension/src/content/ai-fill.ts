@@ -6,6 +6,7 @@ import type { HarvestedField } from './harvest/collect.js'
 import { applyDecisions } from './fill/apply.js'
 import { requestMapFields } from '../lib/ai.js'
 import { scrapeJobDescription } from './job-description.js'
+import { describeSyncFailure, type SyncFailureReason } from '../lib/sync.js'
 
 const AI_KINDS = new Set<FieldDescriptor['kind']>([
   'text', 'textarea', 'select', 'radio', 'checkbox', 'date', 'combobox',
@@ -38,6 +39,7 @@ export async function fillWithAi(
   profile: Profile,
   doc: Document,
   online: boolean,
+  syncReason?: SyncFailureReason,
 ): Promise<FillResult[]> {
   const eligible = unresolved.filter(isAiEligible)
   const deferred = unresolved.filter(d => !isAiEligible(d))
@@ -56,10 +58,11 @@ export async function fillWithAi(
   if (eligible.length === 0) return results
 
   if (!online) {
+    const note = describeSyncFailure(syncReason)
     for (const d of eligible) {
       results.push({
         ref: d.ref, label: d.label, outcome: 'needs-user', value: '',
-        confidence: 0, source: 'heuristic', note: 'server offline — AI unavailable',
+        confidence: 0, source: 'heuristic', note,
       })
     }
     return results

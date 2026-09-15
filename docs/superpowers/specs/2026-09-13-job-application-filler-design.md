@@ -259,15 +259,25 @@ These are the failure modes that decide whether this works on real postings.
 
 ## 5. Claude CLI bridge
 
-Verified working on 2026-09-13 with claude 2.1.270. The smoke test returned
+Verified working on 2026-09-13 with claude 2.1.270, and re-verified on
+2026-09-15 with claude 2.1.272. The smoke test returned
 `"apiKeySource":"none"`, confirming OAuth subscription auth with no API key.
+
+`--tools ''` alone does **not** isolate the CLI: a live run on 2026-09-15
+showed it still loading every globally-installed MCP server (`mcp_servers`
+included entries in `pending` and `failed` state) and the full slash-command
+list from `~/.claude`. `--strict-mcp-config`, passed with no `--mcp-config`
+file, drops `mcp_servers` to `[]` and `tools` to `['StructuredOutput']` only,
+while `apiKeySource` stays `"none"`. Both flags are required together — see
+`docs/superpowers/plans/2026-09-15-m4.6-repair.md` Task 3.
 
 ```ts
 spawn('claude', [
   '-p', prompt,
   '--system-prompt', systemPrompt,   // replaces default; keeps overhead small
   '--json-schema', JSON.stringify(schema),
-  '--tools', '',                     // no tool access
+  '--tools', '',                     // no built-in tool access
+  '--strict-mcp-config',             // no MCP servers — see note above
   '--no-session-persistence',
   '--output-format', 'json',
   '--model', 'sonnet',

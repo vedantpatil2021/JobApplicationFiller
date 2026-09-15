@@ -4,15 +4,16 @@
 first and updates it last. If it disagrees with `git log`, git is right: fix
 this file.
 
-- **Last updated:** 2026-09-14 (M4 live-test fixes + fill correctness committed)
-- **Branch:** `main`
-- **Last commit:** see `git log --oneline -5` — M4 live-test fixes
-  (`49de3da`, `d7cf601`, `c1e7ca1`, `5b31ec6`). Do not push unless asked.
-- **Current milestone:** M4 **code complete and green in tests**. M3 live browser
-  pass still outstanding. M5 blocked on live DOM in `docs/ats/findings.md`.
+- **Last updated:** 2026-09-15 (M4.6 repair complete, green, on `fix/m4.6-repair`)
+- **Branch:** `fix/m4.6-repair` (not yet merged to `main` — see "Next up")
+- **Last commit:** see `git log --oneline -5` — M4.6 repair
+  (`b48be41`, `599d0cb`, `ccefde0`, `e54a2d5`). Do not push unless asked.
+- **Current milestone:** M4.6 **done, green, committed**. M4.5 (live recon)
+  written but not yet run. M5 still blocked on live DOM in
+  `docs/ats/findings.md`.
 - **Remote:** `origin` → github.com/vedantpatil2021/JobApplicationFiller
 - **Trunk:** `main`. Milestone work happens on its own branch, then merges to `main`.
-- **Plan in force:** `docs/superpowers/plans/2026-09-14-m4-ai-bridge.md`
+- **Plan in force:** `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`
 
 ## Agent preferences
 
@@ -22,13 +23,20 @@ architecture decisions, hard debugging, or when the user explicitly asks.
 
 ## Next up
 
-**Live browser pass (M3 Task 8 Step 6), then write the M5 plan from findings.**
+**Merge `fix/m4.6-repair` to `main` (via `superpowers:finishing-a-development-branch`),
+then run `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`.**
 
-1. Follow the checklist in **`docs/ats/findings.md`** — Greenhouse + Lever live fill.
-2. Record real markup for anything that failed in the live results tables.
-3. Only then write `docs/superpowers/plans/2026-09-14-m5-adapters.md` from those rows.
+1. Finish and merge the `fix/m4.6-repair` branch — four bug fixes, all
+   jsdom-green, not yet on `main`.
+2. Follow `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`: Task 2 uses
+   Codex (`gpt-5.6-tera`, `--search`) to find real, verifiable Greenhouse and
+   Lever postings; Task 4 drives an actual browser against the repaired
+   extension and records results.
+3. Only after that pass has real rows, write
+   `docs/superpowers/plans/<date>-m5-adapters.md` from them — do not invent
+   Workday/iCIMS/etc. selectors.
 
-To verify M4 locally without a live posting:
+To verify locally without a live posting:
 
 ```bash
 npm run dev
@@ -45,32 +53,33 @@ npm run build -w @jaf/extension
 | M2 | Extension skeleton — detection, sticky FAB, sync | `plans/2026-09-13-m2-m3-extension-autofill.md` | **done, green, committed** |
 | M3 | Fill engine — harvest, resolve, fill on Greenhouse + Lever | same file | **code complete + green in jsdom; live pass outstanding** |
 | M4 | Claude CLI bridge — AI fallback, answer cache | `plans/2026-09-14-m4-ai-bridge.md` | **done, green, committed** |
-| M5 | Adapters — Ashby, Gem, SmartRecruiters, Workday, iCIMS, Taleo, Oracle | not written yet | **blocked** on live rows in `docs/ats/findings.md` |
+| M4.5 | Live recon — real postings, real fill, real findings | `plans/2026-09-15-m4.5-live-recon.md` | **written, not yet run** |
+| M4.6 | Repair — AI diagnosability, combobox correctness, CLI isolation | `plans/2026-09-15-m4.6-repair.md` | **done, green, on `fix/m4.6-repair`** |
+| M5 | Adapters — Ashby, Gem, SmartRecruiters, Workday, iCIMS, Taleo, Oracle | not written yet | **blocked** on live rows in `docs/ats/findings.md`, from M4.5 |
 | M6 | AI features — resume parsing, JD extraction, answer drafting | not written yet | blocked behind M5 |
 | M7 | Hardening | not written yet | blocked behind M6 |
 
-## M4 tasks
+## M4.6 tasks
+
+Root-caused from a live test on a real Greenhouse posting this session (see
+`docs/ats/findings.md` → "M4.6 repair"):
 
 | # | Task | Status |
 |---|---|---|
-| 1 | Shared AI contract (`schema/ai.ts`) | done |
-| 2 | Answer cache (`ai/cache.ts`, `storage/json-store.ts`) | done — 5 tests |
-| 3 | Claude CLI bridge + map-fields prompt | done — 6 tests |
-| 4 | Provider + `POST /api/ai/map-fields` | done — 6 tests |
-| 5 | Extension AI wiring + Workday sign-in gate | done — 7 tests |
-| 6 | Full test suite green | done — **225 tests** |
-| 7 | Live-test fixes (AI routing, resume attach, UX notes) | done — `49de3da`, `c1e7ca1` |
-| 8 | Fill correctness (select/combobox/radio, resolver floor) | done — `d7cf601` |
+| 1 | Setup page checking state during AI re-check | done — `e54a2d5`, 2 tests |
+| 2 | Sync failure diagnostics (`SyncFailureReason`, `describeSyncFailure`) | done — `ccefde0`, 5 tests |
+| 3 | Claude CLI isolation (`--strict-mcp-config`) + spec §5 correction | done — `599d0cb`, 1 test |
+| 4 | Combobox lazy-listbox expansion (`expandComboboxes`) | done — `b48be41`, 4 tests |
 
 ## Test and build state
 
-`npm test` at the repo root — **238 passing**:
+`npm test` at the repo root — **249 passing** (was 238 before M4.6):
 
 | Workspace | Tests |
 |---|---|
-| `@jaf/controller` | 35 |
-| `@jaf/extension` | 127 |
-| `@jaf/server` | 60 |
+| `@jaf/controller` | 37 |
+| `@jaf/extension` | 135 |
+| `@jaf/server` | 61 |
 | `@jaf/shared` | 16 |
 
 Run `npm run build -w @jaf/extension` before loading in Chrome.
@@ -90,6 +99,28 @@ Run `npm run build -w @jaf/extension` before loading in Chrome.
 - **Prompt injection guard** — job description wrapped in `<job_description>` tags.
 
 ## Known gotchas
+
+Carried forward from prior sessions, plus M4.6:
+
+- **`--tools ''` alone does not isolate the Claude CLI.** Verified live: it
+  still loads every globally-installed MCP server (including `pending`/
+  `failed` ones) and the full slash-command list. Always pair it with
+  `--strict-mcp-config` (no `--mcp-config` file) — see
+  `packages/server/src/ai/claude-cli.ts` `buildClaudeArgs`.
+- **A combobox with an empty `options` array at harvest time is not
+  necessarily a plain text field.** Many ATS widgets render their listbox
+  only on focus. `expandComboboxes()` (`content/harvest/expand-combobox.ts`)
+  runs once, right after `collectFields()`, and must keep running there —
+  moving it after `resolveAll()` would defeat the point, since the resolver
+  needs the real options too.
+- **`SyncResult` now carries an optional `reason`.** Anything that reads
+  `syncProfile()`'s return value and forwards a "why is AI unavailable"
+  message to the user must use `describeSyncFailure(reason)`, not a
+  hardcoded string — a hardcoded fallback string re-introduces the exact bug
+  M4.6 Task 2 fixed.
+- **`fillWithAi`'s signature grew a 6th, optional parameter** (`syncReason?:
+  SyncFailureReason`). Existing 5-argument call sites still compile; new
+  callers should pass it through from `sync.ts`'s result.
 
 Carried forward from prior sessions, plus M4:
 
@@ -150,6 +181,8 @@ Carried forward from prior sessions, plus M4:
 | Never `claude --bare` | Forces API key; breaks zero-cost requirement |
 | Never auto-submit | User clicks Submit themselves |
 | Sonnet-class models for implementation | User preference; Opus reserved for hard problems |
+| M4.6 fixes bugs, does not add ATS coverage | Diagnosed from a live Greenhouse test, not from `findings.md` rows — M4.5 (recon) still has to run to unblock M5 |
+| `--strict-mcp-config` required alongside `--tools ''` | Verified live 2026-09-15; `--tools ''` alone still loads the user's global MCP/plugin config |
 
 ## How to update this file
 

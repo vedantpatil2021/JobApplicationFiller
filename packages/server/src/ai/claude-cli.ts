@@ -72,16 +72,26 @@ export interface ClaudeMapFieldsArgs {
   schema: object
 }
 
-/** Verified invocation from spec §5 — never uses --bare. */
-export async function claudeMapFields(args: ClaudeMapFieldsArgs): Promise<unknown> {
-  const stdout = await runClaude([
+/**
+ * Verified invocation from spec §5, plus `--strict-mcp-config` (M4.6
+ * finding — see docs/STATE.md): without it, the CLI silently loads every
+ * globally-installed MCP server, including ones in a `pending` or `failed`
+ * state, on every single map-fields call. Never uses --bare.
+ */
+export function buildClaudeArgs(args: ClaudeMapFieldsArgs): string[] {
+  return [
     '-p', args.prompt,
     '--system-prompt', args.systemPrompt,
     '--json-schema', JSON.stringify(args.schema),
     '--tools', '',
+    '--strict-mcp-config',
     '--no-session-persistence',
     '--output-format', 'json',
     '--model', 'sonnet',
-  ])
+  ]
+}
+
+export async function claudeMapFields(args: ClaudeMapFieldsArgs): Promise<unknown> {
+  const stdout = await runClaude(buildClaudeArgs(args))
   return parseClaudeJsonOutput(stdout)
 }
