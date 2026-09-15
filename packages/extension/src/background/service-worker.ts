@@ -1,5 +1,6 @@
 import { syncProfile } from '../lib/sync.js'
 import { mapFieldsViaServer } from '../lib/ai.js'
+import { fetchPrimaryResume } from '../lib/resume.js'
 
 const SYNC_ALARM = 'jaf.sync'
 
@@ -16,6 +17,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg?.type === 'jaf.map-fields') {
     mapFieldsViaServer(msg.fields, msg.profile, msg.jobDescription ?? '').then(sendResponse)
+    return true
+  }
+  if (msg?.type === 'jaf.fetch-resume') {
+    fetchPrimaryResume().then(sendResponse)
     return true
   }
   return false

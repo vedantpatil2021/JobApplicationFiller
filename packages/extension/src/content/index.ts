@@ -5,6 +5,7 @@ import { collectFields } from './harvest/collect.js'
 import { resolveAll } from './resolve/score.js'
 import { applyDecisions } from './fill/apply.js'
 import { fillWithAi } from './ai-fill.js'
+import { fillVirtualFiles } from './resume-fill.js'
 import { mountWidget } from './widget/mount.js'
 import { watchForChanges } from './observe.js'
 
@@ -30,8 +31,12 @@ async function fill(): Promise<FillResult[]> {
   const { decisions, unresolved } = resolveAll(fields.map(f => f.descriptor), profile)
 
   const results = applyDecisions(fields, decisions)
-  if (unresolved.length > 0) {
-    results.push(...await fillWithAi(fields, unresolved, profile, document, online))
+
+  const { results: fileResults, remaining } = await fillVirtualFiles(fields, unresolved, online)
+  results.push(...fileResults)
+
+  if (remaining.length > 0) {
+    results.push(...await fillWithAi(fields, remaining, profile, document, online))
   }
   return results
 }
