@@ -8,6 +8,10 @@ const BADGE: Record<FillResult['outcome'], string> = {
   'needs-user': 'bg-amber-100 text-amber-900',
 }
 
+// Content scripts run on the page's own origin, so a plain path resolves
+// against that page, not the extension — chrome.runtime.getURL is required.
+const logoUrl = chrome.runtime.getURL('icons/icon-48.png')
+
 export function Widget() {
   const [open, setOpen] = useState(false)
   const [results, setResults] = useState<FillResult[]>([])
@@ -56,8 +60,10 @@ export function Widget() {
       )}
 
       <button onClick={run} disabled={busy}
-              className="rounded-full bg-neutral-900 px-5 py-3 font-medium text-white shadow-xl disabled:opacity-60">
-        {busy ? 'Filling…' : 'Fill application'}
+              aria-label={busy ? 'Filling application…' : 'Fill application'}
+              title={busy ? 'Filling…' : 'Fill application'}
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-900 shadow-xl disabled:opacity-60">
+        <img src={logoUrl} alt="" className={`h-8 w-8 rounded ${busy ? 'animate-spin' : ''}`} />
       </button>
     </div>
   )

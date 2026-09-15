@@ -22,13 +22,16 @@ export default function App() {
 
   return (
     <main className="mx-auto max-w-3xl p-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Job Application Filler</h1>
-        {status && (
-          <p className="mt-1 text-sm text-neutral-500">
-            Your data is in <code>{status.dataDir}</code>
-          </p>
-        )}
+      <header className="mb-6 flex items-center gap-3">
+        <img src="/logo-512.png" alt="" className="h-10 w-10 shrink-0 rounded-lg" />
+        <div>
+          <h1 className="text-2xl font-semibold">Job Application Filler</h1>
+          {status && (
+            <p className="mt-1 text-sm text-neutral-500">
+              Your data is in <code>{status.dataDir}</code>
+            </p>
+          )}
+        </div>
       </header>
 
       {offline && (

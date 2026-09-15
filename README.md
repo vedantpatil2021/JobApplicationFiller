@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/brand/logo.png" alt="Job Application Filler logo" width="120">
+</p>
+
 # Job Application Filler
 
 Fills job applications from one profile you keep on your own machine. A local
