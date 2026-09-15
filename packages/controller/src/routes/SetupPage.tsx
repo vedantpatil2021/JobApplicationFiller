@@ -19,7 +19,9 @@ function ToolRow({ name, info, fix }: { name: string; info: ToolInfo; fix: strin
   )
 }
 
-export function SetupPage({ status, onRetry }: { status: Status | null; onRetry: () => void }) {
+export function SetupPage({
+  status, checking = false, onRetry,
+}: { status: Status | null; checking?: boolean; onRetry: () => void }) {
   const [token, setToken] = useState('')
   const [tokenError, setTokenError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -66,10 +68,13 @@ export function SetupPage({ status, onRetry }: { status: Status | null; onRetry:
       <section className="rounded-lg border border-neutral-200 p-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Local AI</h2>
-          <button onClick={onRetry} className="rounded-md border px-3 py-1 text-sm">Re-check</button>
+          <button onClick={onRetry} disabled={checking}
+                  className="rounded-md border px-3 py-1 text-sm disabled:opacity-50">
+            {checking ? 'Checking…' : 'Re-check'}
+          </button>
         </div>
 
-        {!status ? (
+        {(!status || checking) ? (
           <p className="text-sm text-neutral-500">Checking…</p>
         ) : (
           <>

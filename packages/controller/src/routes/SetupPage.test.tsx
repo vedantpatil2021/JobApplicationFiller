@@ -78,6 +78,13 @@ describe('SetupPage', () => {
     expect(onRetry).toHaveBeenCalled()
   })
 
+  it('shows a checking state and disables the button while a re-check runs', async () => {
+    render(<SetupPage status={status()} checking onRetry={() => {}} />)
+    const button = screen.getByRole('button', { name: /checking/i })
+    expect(button).toBeDisabled()
+    expect(screen.getAllByText(/checking/i).length).toBeGreaterThan(0)
+  })
+
   it('surfaces a pairing fetch failure instead of showing a blank box', async () => {
     vi.mocked(api.getPairing).mockRejectedValue(new Error('401'))
     render(<SetupPage status={status()} onRetry={() => {}} />)
