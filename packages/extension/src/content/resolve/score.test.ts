@@ -98,6 +98,29 @@ describe('resolveField', () => {
     }), profile())).toBeNull()
   })
 
+  it('does not fill a conditional referral-name question with the applicant\'s own name', () => {
+    // The word "name" alone is too generic to count as strong evidence — it
+    // appears in plenty of unrelated questions. This is a live-test finding
+    // (M4.7): this exact label filled with the applicant's own full name.
+    // e_signature.full_name must be non-empty here, or resolveField would
+    // return null anyway just because the value is empty — that would pass
+    // even with the bug present and prove nothing.
+    const p = profile()
+    p.applicant_profile.e_signature.full_name = 'Ada Lovelace'
+    expect(resolveField(field({
+      kind: 'text',
+      label: "If you selected 'Referred by CodePath employee', please list their name.",
+    }), p)).toBeNull()
+  })
+
+  it('still matches a genuine "your name" e-signature field by the multi-word phrase', () => {
+    const p = profile()
+    p.applicant_profile.e_signature.full_name = 'Ada Lovelace'
+    const d = resolveField(field({ kind: 'text', label: 'Your full name' }), p)
+    expect(d?.canonicalKey).toBe('full_name')
+    expect(d?.value).toBe('Ada Lovelace')
+  })
+
   it('resolves a combobox country field when the option exists', () => {
     const p = profile()
     p.applicant_profile.personal_information.address.country = 'India'

@@ -27,6 +27,30 @@ A live test surfaced four defects, all fixed in `docs/superpowers/plans/2026-09-
 M4.6 code is jsdom-green. **Still needs a live re-run** (M4.5) to confirm
 these fixes hold on the real posting and to capture the DOM rows below.
 
+## M4.7 — resolver false positives found on the same live pass
+
+The user supplied a screenshot of the same Greenhouse posting (CodePath,
+"Engineering Project Manager") with real wrong answers, beyond the M4.6 four.
+Root-caused directly against the resolver's scoring formula, no new live DOM
+needed:
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| Referral field ("if you selected referred by employee, list their name") filled with the applicant's own name | `full_name`'s synonym list includes the bare word `'name'`; the resolver's substring-match branch gave *any* label containing "name" anywhere a ~0.81 score, regardless of how much of a long, unrelated sentence that one word covered | `scoreAgainst()` in `resolve/score.ts`: only multi-word synonyms get the strong substring-match score; single-word synonyms (and the fallback) now score by how much of the label's distinct tokens are covered, combining all of a field's synonyms — a short label fully covered scores high, one generic word in a long sentence scores low |
+| "Are you Hispanic or Latino?" filled with "Columbus" (a city) | Not fully root-caused without live DOM — plausibly the same lazy-listbox mechanism as M4.6 Task 4, or an AI/label mismatch. Fixed as a value-shape guard regardless of cause | New `isImplausibleYesNoAnswer()` in `content/fill/plausibility.ts`: a label phrased as a yes/no question ("Are/Do/Have/Did/Will/Can you...", anchored to the start) that's about to get a value that doesn't read as yes/no is refused and reported `needs-user` instead of written |
+
+Two regressions caught by the existing test suite while building this fix,
+both fixed in the same pass: the yes/no-label regex was originally
+unanchored and misfired on "Why do you want this job?" (a WH-question that
+merely contains "do you"); the resolver's synonym-coverage rewrite initially
+broke `Resume/CV` matching `resume`/`cv` (a legitimate short label, wrongly
+penalized by the same rule that stops a long sentence from matching on one
+buried word). Both are covered by their own regression tests now.
+
+**Still not diagnosed:** *why* the Hispanic/Latino field got "Columbus"
+specifically (rather than merely refusing it) needs the live DOM — folded
+into the M4.5 live-recon pass.
+
 ### Manual live test checklist
 
 Use this when a browser is available. Check each box and fill the tables below.
