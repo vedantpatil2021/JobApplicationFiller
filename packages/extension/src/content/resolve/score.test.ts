@@ -68,6 +68,59 @@ describe('resolveField', () => {
     expect(resolveField(field({ label: 'Gender', kind: 'select', options: ['Female', 'Male'] }), p)?.value).toBe('Female')
   })
 
+  it('matches a short, unambiguous word embedded in a full demographic question — M4.8 regression', () => {
+    // A live-test regression: M4.7 correctly stopped the generic word "name"
+    // from matching a long, unrelated sentence, but the same rule wrongly
+    // demoted words like "transgender"/"veteran"/"disability" that are
+    // specific enough to be strong evidence even as a single word.
+    const p = profile()
+    p.applicant_profile.voluntary_demographics.opt_in = true
+    p.applicant_profile.voluntary_demographics.transgender_status = 'No'
+    p.applicant_profile.voluntary_demographics.veteran_status = 'I am not a protected veteran'
+    p.applicant_profile.voluntary_demographics.disability_status = 'No, I do not have a disability'
+
+    expect(resolveField(field({
+      label: 'Do you identify as transgender? (select the option that best describes you)',
+      kind: 'select', options: ['Yes', 'No', 'Decline to answer'],
+    }), p)?.value).toBe('No')
+
+    expect(resolveField(field({
+      label: 'Are you a veteran or active member of the armed forces?',
+      kind: 'select', options: ['I am not a protected veteran', 'I am a protected veteran'],
+    }), p)?.value).toBe('I am not a protected veteran')
+
+    expect(resolveField(field({
+      label: 'Do you have a disability or chronic condition that substantially limits a major life activity?',
+      kind: 'select', options: ['Yes, I have a disability', 'No, I do not have a disability'],
+    }), p)?.value).toBe('No, I do not have a disability')
+  })
+
+  it('matches an adjective-phrased racial/ethnic identity question', () => {
+    // The registry's synonyms were noun forms ("race", "ethnicity"); a real
+    // live posting phrased this with adjectives instead, which shared no
+    // substring with either synonym at all.
+    const p = profile()
+    p.applicant_profile.voluntary_demographics.opt_in = true
+    p.applicant_profile.voluntary_demographics.race_ethnicity = 'Asian'
+    const d = resolveField(field({
+      label: 'How would you describe your racial/ethnic identity?',
+      kind: 'select', options: ['Asian', 'White', 'Black or African American'],
+    }), p)
+    expect(d?.canonicalKey).toBe('race')
+    expect(d?.value).toBe('Asian')
+  })
+
+  it('matches a talent-community / future-contact consent question', () => {
+    const p = profile()
+    p.applicant_profile.consents.opt_in_talent_community = true
+    const d = resolveField(field({
+      label: 'I would like to be contacted about future employment opportunities at this company.',
+      kind: 'checkbox',
+    }), p)
+    expect(d?.canonicalKey).toBe('contact_future_opportunities')
+    expect(d?.value).toBe('Yes')
+  })
+
   it('skips a canonical field whose profile value is empty', () => {
     expect(resolveField(field({ label: 'LinkedIn URL' }), profile())).toBeNull()
   })

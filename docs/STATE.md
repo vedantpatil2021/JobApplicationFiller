@@ -4,19 +4,20 @@
 first and updates it last. If it disagrees with `git log`, git is right: fix
 this file.
 
-- **Last updated:** 2026-09-15 (M4.6 + M4.7 merged and pushed; brand logo
-  applied across extension/controller/README, also pushed)
-- **Branch:** `main`, clean, up to date with `origin/main` at `83adf2a`.
-- **Last commit:** see `git log --oneline -6`. Do not push unless asked.
-- **Current milestone:** M4.6 **done, merged, pushed**. M4.7 (resolver
-  false-positive fixes, from a user-supplied screenshot of the same live
-  test) **done, merged, pushed**. M4.5 (live recon) written but not yet run.
-  M5 still blocked on live DOM in `docs/ats/findings.md`.
+- **Last updated:** 2026-09-15 (M4.6/M4.7/logo merged+pushed; M4.8 green on
+  `fix/heuristic-coverage-gaps`, not yet merged)
+- **Branch:** `fix/heuristic-coverage-gaps` (not yet merged — see "Next up")
+- **Last commit:** see `git log --oneline -6`. `main` is at `5d0b891`
+  (M4.6/M4.7/logo, pushed). Do not push unless asked.
+- **Current milestone:** M4.6/M4.7 **done, merged, pushed**. M4.8 (a second
+  live-test screenshot: an M4.7 regression + real coverage gaps) **done,
+  green, not yet merged**. M4.5 (live recon) written but not yet run. M5
+  still blocked on live DOM in `docs/ats/findings.md`.
 - **Remote:** `origin` → github.com/vedantpatil2021/JobApplicationFiller
 - **Trunk:** `main`. Milestone work happens on its own branch, then merges to `main`.
 - **Plan in force:** `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`
-  (M4.7 was bounded bug-fixing, root-caused in chat — no separate plan file;
-  see `docs/ats/findings.md` → "M4.7" for the full record)
+  (M4.7/M4.8 were bounded bug-fixing, root-caused in chat — no separate plan
+  files; see `docs/ats/findings.md` → "M4.7"/"M4.8" for the full record)
 
 ## Agent preferences
 
@@ -46,18 +47,27 @@ every derived size the same way — `sips -z <W> <H> assets/brand/logo.png
 
 ## Next up
 
-**Run `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`.** M4.6 and
-M4.7 are both merged and pushed; nothing is blocking this.
+**Merge `fix/heuristic-coverage-gaps` to `main`, then run
+`docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`.**
 
-1. Task 2 uses Codex (`gpt-5.6-tera`, `--search`) to find real, verifiable
-   Greenhouse and Lever postings; Task 4 drives an actual browser against
-   the repaired extension and records results. Specifically re-check the
-   Hispanic/Latino field (or whatever demographic field is closest) to find
-   the real mechanism behind the "Columbus" bug — M4.7's fix stops it from
-   writing, but doesn't yet know why it happened.
-2. Only after that pass has real rows, write
+1. Finish and merge `fix/heuristic-coverage-gaps` (M4.8) — five tasks, all
+   jsdom-green, not yet on `main`.
+2. Then the live-recon plan: Task 2 uses Codex (`gpt-5.6-tera`, `--search`)
+   to find real, verifiable Greenhouse and Lever postings; Task 4 drives an
+   actual browser against the repaired extension and records results.
+   Specifically re-check whatever field is near "Location (City)" on a real
+   posting to find the real mechanism behind the city/date mismatch — M4.8's
+   guard stops it from writing, but doesn't yet know why it happened.
+3. Only after that pass has real rows, write
    `docs/superpowers/plans/<date>-m5-adapters.md` from them — do not invent
    Workday/iCIMS/etc. selectors.
+4. **A pattern worth naming for whoever picks this up:** three rounds of
+   live-test bugs (M4.6, M4.7, M4.8) were all diagnosed by actually reading
+   `profile/profile.yaml` and the exact source, not by guessing from a
+   screenshot — e.g. M4.8's city/date bug was confirmed in one `grep`
+   because `e_signature.date` in the file matched the wrong value on the
+   page character-for-character. When the user reports a wrong value, check
+   the profile file first before hypothesizing.
 
 To verify locally without a live posting:
 
@@ -94,10 +104,9 @@ Root-caused from a live test on a real Greenhouse posting this session (see
 | 3 | Claude CLI isolation (`--strict-mcp-config`) + spec §5 correction | done — `599d0cb`, 1 test |
 | 4 | Combobox lazy-listbox expansion (`expandComboboxes`) | done — `b48be41`, 4 tests |
 
-## M4.7 tasks
+## M4.7 tasks — merged, on `main`
 
-Found from a user-supplied screenshot of the same live posting, on branch
-`fix/resolver-false-positives` (not yet merged):
+Found from a user-supplied screenshot of the same live posting:
 
 | # | Task | Status |
 |---|---|---|
@@ -105,21 +114,33 @@ Found from a user-supplied screenshot of the same live posting, on branch
 | 2 | `isImplausibleYesNoAnswer()` — refuse a non-yes/no value into a yes/no-phrased label | done — new `content/fill/plausibility.ts`, 4 tests |
 | 3 | Wire the plausibility guard into `applyDecisions` for text/textarea/combobox kinds | done — 2 new tests in `apply.test.ts` |
 
-Not yet diagnosed: *why* the Hispanic/Latino field specifically got
-"Columbus" — needs live DOM. The guard stops it from being written
-regardless of cause; the M4.5 live-recon pass should try to find the real
-mechanism.
+## M4.8 tasks — on `fix/heuristic-coverage-gaps`, not yet merged
+
+Found from a *second* live-test screenshot, after actually reading
+`profile/profile.yaml` to confirm root causes instead of guessing:
+
+| # | Task | Status |
+|---|---|---|
+| 1 | Un-regress single-word synonym scoring: `GENERIC_SYNONYMS` denylist (`name`,`date`,`state`,`address`,`status`,`source`) replaces M4.7's blanket multi-word-only rule | done — new test covers transgender/veteran/disability together |
+| 2 | Expand `race` canonical field's synonyms with adjective forms (`racial`, `ethnic`, `racial/ethnic`, ...) | done — 1 new test |
+| 3 | New canonical field `contact_future_opportunities` → `consents.opt_in_talent_community` | done — 1 new test |
+| 4 | `profileSummary()` now includes voluntary demographics (once opted in) and the talent-community consent, so the AI fallback has real data too | done — 3 new tests in `map-fields.test.ts` |
+| 5 | `isImplausibleDateAnswer()` — refuse an ISO-date value into a non-date-labeled field, same pattern as the M4.7 yes/no guard | done — new `plausibility.ts` export, 4 + 2 tests |
+
+Still not diagnosed: the exact mechanism behind the city/date value landing
+on the wrong control (task 5 stops it from reaching the page, doesn't
+explain why it happened). Needs live DOM — M4.5.
 
 ## Test and build state
 
-`npm test` at the repo root — **257 passing** (238 before M4.6, 249 after
-M4.6, 257 after M4.7):
+`npm test` at the repo root — **269 passing** (238 before M4.6, 249 after
+M4.6, 257 after M4.7, 269 after M4.8):
 
 | Workspace | Tests |
 |---|---|
 | `@jaf/controller` | 37 |
-| `@jaf/extension` | 143 |
-| `@jaf/server` | 61 |
+| `@jaf/extension` | 152 |
+| `@jaf/server` | 64 |
 | `@jaf/shared` | 16 |
 
 Run `npm run build -w @jaf/extension` before loading in Chrome.

@@ -30,4 +30,31 @@ describe('map-fields prompt', () => {
     expect(s).toContain('Ada Lovelace')
     expect(s).not.toContain('applicant_profile')
   })
+
+  it('includes voluntary demographics in the summary once the applicant opts in', () => {
+    // Otherwise a demographic question the resolver can't confidently match
+    // reaches the AI with no real data to answer from — it can only ever
+    // say "not confident", even though the applicant already answered it.
+    const profile = emptyProfile()
+    profile.applicant_profile.voluntary_demographics.opt_in = true
+    profile.applicant_profile.voluntary_demographics.race_ethnicity = 'Asian'
+    profile.applicant_profile.voluntary_demographics.veteran_status = 'I am not a protected veteran'
+    const s = profileSummary(profile)
+    expect(s).toContain('Asian')
+    expect(s).toContain('I am not a protected veteran')
+  })
+
+  it('omits voluntary demographics from the summary when the applicant has not opted in', () => {
+    const profile = emptyProfile()
+    profile.applicant_profile.voluntary_demographics.race_ethnicity = 'Asian'
+    const s = profileSummary(profile)
+    expect(s).not.toContain('Asian')
+  })
+
+  it('includes the talent-community consent preference in the summary', () => {
+    const profile = emptyProfile()
+    profile.applicant_profile.consents.opt_in_talent_community = false
+    const s = profileSummary(profile)
+    expect(s.toLowerCase()).toContain('talent community')
+  })
 })

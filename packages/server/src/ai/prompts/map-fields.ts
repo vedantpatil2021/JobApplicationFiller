@@ -31,6 +31,8 @@ export function profileSummary(profile: Profile): string {
   const pi = profile.applicant_profile.personal_information
   const we = profile.applicant_profile.work_experience
   const wa = profile.applicant_profile.work_authorization
+  const vd = profile.applicant_profile.voluntary_demographics
+  const consents = profile.applicant_profile.consents
   const lines = [
     `Name: ${pi.first_name} ${pi.last_name}`.trim(),
     `Email: ${pi.email}`,
@@ -45,6 +47,21 @@ export function profileSummary(profile: Profile): string {
       lines.push(`- ${role.job_title} at ${role.company_name} (${role.start_date} – ${role.end_date || 'Present'})`)
     }
   }
+  // Voluntary demographics are sensitive — the resolver already withholds them
+  // unless the applicant opted in (score.ts). Once they have, the AI needs
+  // the real answers too; otherwise a demographic question it can't
+  // confidently *resolve* reaches it with nothing to answer from, and it can
+  // only ever say "not confident" even though the applicant already answered.
+  if (vd.opt_in) {
+    lines.push('Voluntary demographics (applicant opted in to share these):')
+    lines.push(`- Gender identity: ${vd.gender_identity}`)
+    lines.push(`- Transgender: ${vd.transgender_status}`)
+    lines.push(`- Race/ethnicity: ${vd.race_ethnicity}`)
+    lines.push(`- Sexual orientation: ${vd.sexual_orientation}`)
+    lines.push(`- Veteran status: ${vd.veteran_status}`)
+    lines.push(`- Disability status: ${vd.disability_status}`)
+  }
+  lines.push(`Wants to be contacted about future opportunities / talent community: ${consents.opt_in_talent_community ? 'Yes' : 'No'}`)
   return lines.filter(l => !l.endsWith(': ')).join('\n')
 }
 

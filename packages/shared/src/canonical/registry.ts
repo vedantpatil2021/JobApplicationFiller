@@ -101,7 +101,11 @@ export const CANONICAL_FIELDS: CanonicalField[] = [
   { key: 'transgender', path: 'voluntary_demographics.transgender_status',
     synonyms: ['transgender'], kinds: ['select', 'radio', 'combobox'], sensitive: true },
   { key: 'race', path: 'voluntary_demographics.race_ethnicity',
-    synonyms: ['race', 'ethnicity', 'race/ethnicity'], kinds: ['select', 'radio', 'combobox'], sensitive: true },
+    // Real ATS wording varies between noun and adjective forms — "race/
+    // ethnicity" shares no substring with "racial/ethnic identity" at all.
+    synonyms: ['race', 'ethnicity', 'race/ethnicity', 'racial', 'ethnic',
+               'racial/ethnic', 'racial or ethnic', 'racial and/or ethnic'],
+    kinds: ['select', 'radio', 'combobox'], sensitive: true },
   { key: 'sexual_orientation', path: 'voluntary_demographics.sexual_orientation',
     synonyms: ['sexual orientation'], kinds: ['select', 'radio', 'combobox'], sensitive: true },
   { key: 'veteran', path: 'voluntary_demographics.veteran_status',
@@ -109,6 +113,11 @@ export const CANONICAL_FIELDS: CanonicalField[] = [
     kinds: ['select', 'radio', 'combobox'], sensitive: true },
   { key: 'disability', path: 'voluntary_demographics.disability_status',
     synonyms: ['disability', 'disability status'], kinds: ['select', 'radio', 'combobox'], sensitive: true },
+
+  { key: 'contact_future_opportunities', path: 'consents.opt_in_talent_community',
+    synonyms: ['contacted about future', 'future opportunities', 'talent community',
+               'stay in touch', 'future roles'],
+    kinds: ['select', 'radio', 'checkbox', 'combobox'] },
 
   // Virtual: the file strategy handles this, there is no string to write.
   { key: 'resume', path: '', virtual: true,

@@ -51,6 +51,35 @@ buried word). Both are covered by their own regression tests now.
 specifically (rather than merely refusing it) needs the live DOM — folded
 into the M4.5 live-recon pass.
 
+## M4.8 — a second live pass surfaced a real M4.7 regression, plus real gaps
+
+The user re-tested against the same CodePath posting after M4.7 landed.
+Every demographic question showed `needs-user` / "AI was not confident
+enough" **even though `voluntary_demographics.opt_in: true` and every value
+was filled in** in `profile/profile.yaml` — confirmed by reading the file
+directly. Also, "Location (City)" was filled with `2026-09-14`, which
+matched `e_signature.date` in that same profile file *exactly* — direct
+proof of which canonical field's value ended up on the wrong control.
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| `transgender`/`veteran`/`disability` demographic questions stopped heuristically matching, despite opt-in and real values | **M4.7 regression**: the fix for "name" falsely matching everything applied the same weak-coverage penalty to *every* single-word synonym — including specific, unambiguous ones. `covered/lt.size` for a real word like "transgender" in an 8-word question stayed just under the 0.65 floor | `score.ts`: replaced the blanket multi-word-only rule with a small `GENERIC_SYNONYMS` denylist (`name`, `date`, `state`, `address`, `status`, `source`) — only those fall through to the weak fallback; every other single-word synonym (transgender, veteran, disability, race, city, ...) uses the strong substring-match path again |
+| "How would you describe your racial/ethnic identity?" never matched, opt-in notwithstanding | The registry's `race` synonyms were noun forms (`race`, `ethnicity`, `race/ethnicity`); this real posting used adjective forms (`racial`, `ethnic`) that share no substring with the noun forms at all | Added `racial`, `ethnic`, `racial/ethnic`, `racial or ethnic`, `racial and/or ethnic` as synonyms |
+| "I would like to be contacted about future opportunities" always went to AI and always failed | No canonical field mapped to `consents.opt_in_talent_community` at all — a real, pre-existing coverage gap, not a scoring bug | New canonical field `contact_future_opportunities` → `consents.opt_in_talent_community` |
+| Demographic questions the resolver couldn't confidently match (even after the fixes above — an unanticipated phrasing will always exist) went to AI, which said "not confident" regardless of real profile data | `profileSummary()` sent to the AI never included voluntary demographics or consents at all, so the AI had zero chance of answering correctly even when the applicant had answered these exact questions in their profile | `profileSummary()` now includes voluntary demographics (only once `opt_in` is true) and the talent-community consent, giving the AI fallback a real fighting chance as a second line of defense |
+| "Location (City)" filled with `2026-09-14` | **Not fully root-caused** — the value is confirmed (exact match to `e_signature.date`), but not *how* it reached the wrong control without live DOM access | New `isImplausibleDateAnswer()` in `plausibility.ts`, wired the same way as the M4.7 yes/no guard: an ISO-date-shaped value going into a label with no date-related words is refused regardless of mechanism |
+
+**Not bugs, confirmed correct behavior on the same screenshot:** "Why are you
+interested in working at [company]?" and "What AI tools do you currently
+use?" are genuine personal essay questions with no profile field that could
+possibly answer them — `needs-user` is the right outcome, not a defect.
+Likewise the referral-name field now correctly shows `needs-user` instead of
+silently filling the applicant's own name (M4.7 working as intended).
+
+**Still not diagnosed:** the exact mechanism behind the city/date mismatch.
+The M4.8 guard stops it from reaching the page; finding *why* still needs
+live DOM access (M4.5).
+
 ### Manual live test checklist
 
 Use this when a browser is available. Check each box and fill the tables below.
