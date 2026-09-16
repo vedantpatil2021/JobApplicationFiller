@@ -1,4 +1,5 @@
 import { escapeAttrValue } from '../../lib/selector.js'
+import { openControl, closeControl } from '../dom-interact.js'
 
 const AFFIRMATIVE = /^(yes|true|i agree|agree|accept|1)$/i
 
@@ -113,6 +114,11 @@ function clickListboxOption(el: HTMLInputElement, text: string): void {
 /**
  * Combobox with known options: pick from the list, never type free text.
  * Plain comboboxes (name/email with ARIA but no options) fall back to fillText.
+ *
+ * The listbox discovered earlier (harvest/expand-combobox.ts) may since have
+ * closed — this reopens the control before searching for the option, rather
+ * than assuming it is still in the DOM (M4.9 finding: without this, only the
+ * typed text landed on the page, never a real selection).
  */
 export function fillCombobox(el: HTMLInputElement, value: string, options: string[]): boolean {
   if (options.length === 0) return fillText(el, value)
@@ -120,8 +126,10 @@ export function fillCombobox(el: HTMLInputElement, value: string, options: strin
   const picked = matchOption(value, options)
   if (!picked) return false
 
+  openControl(el)
   setNativeValue(el, picked)
   clickListboxOption(el, picked)
+  closeControl(el)
   return true
 }
 

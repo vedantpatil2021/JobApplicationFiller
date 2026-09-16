@@ -1,4 +1,5 @@
 import type { HarvestedField } from './collect.js'
+import { openControl, closeControl } from '../dom-interact.js'
 
 const DEFAULT_TIMEOUT_MS = 800
 
@@ -34,16 +35,16 @@ function waitForNewOptions(doc: Document, before: Set<Element>, timeoutMs: numbe
 
 /**
  * Greenhouse/Lever/Ashby often render a combobox's option list only once the
- * control is focused, so harvestOptions() sees an empty list at page-load
+ * control is opened, so harvestOptions() sees an empty list at page-load
  * time. Filling that blind means typing free text into a control that only
  * accepts a fixed set of choices (M4.6 finding — docs/ats/findings.md).
  *
- * For each such field, focus and click it (never type — this is a read-only
- * probe, not the real fill) and wait briefly for real `[role="option"]`
- * nodes to appear anywhere in the document. A field that reveals options
- * gets them recorded on its descriptor, in place, before resolve/AI ever
- * see it. A field that reveals nothing keeps its empty option list and
- * falls back to the pre-M4.6 text-fill behaviour — never worse than before.
+ * For each such field, open it (never type — this is a read-only probe, not
+ * the real fill) and wait briefly for real `[role="option"]` nodes to
+ * appear anywhere in the document. A field that reveals options gets them
+ * recorded on its descriptor, in place, before resolve/AI ever see it. A
+ * field that reveals nothing keeps its empty option list and falls back to
+ * the pre-M4.6 text-fill behaviour — never worse than before.
  *
  * Runs one field at a time (not in parallel) so at most one listbox is open
  * at once; on a form with several such fields this adds up to `timeoutMs`
@@ -61,12 +62,11 @@ export async function expandComboboxes(
     const doc = el.ownerDocument
     const before = new Set(doc.querySelectorAll('[role="option"]'))
 
-    el.dispatchEvent(new Event('focus', { bubbles: true }))
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    openControl(el)
 
     const fresh = await waitForNewOptions(doc, before, timeoutMs)
     if (fresh.length > 0) field.descriptor.options = optionTexts(fresh)
 
-    el.dispatchEvent(new Event('blur', { bubbles: true }))
+    closeControl(el)
   }
 }

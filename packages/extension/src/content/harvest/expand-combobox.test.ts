@@ -66,4 +66,64 @@ describe('expandComboboxes', () => {
 
     expect(input.value).toBe('')   // never typed into — only focus/click were dispatched
   })
+
+  it('opens a menu wired to a delegated focusin listener — the React pattern', () => {
+    // React never listens for the plain "focus" event, because real browsers
+    // never bubble it — it listens for the bubbling "focusin" event at a
+    // delegated root instead. A manually dispatched `new Event('focus')`
+    // is a different event type entirely and will never satisfy a
+    // `focusin` listener, no matter what `bubbles` is set to. This is the
+    // live-test finding (M4.9): the multi-select "mark all that apply"
+    // question's menu never opened, so options stayed empty and the real
+    // answer got typed as loose text instead of a real selection.
+    const doc = new DOMParser().parseFromString(`<body>
+      <div id="wrapper">
+        <label for="src">How did you hear about CodePath?</label>
+        <input id="src" role="combobox" aria-controls="src-list">
+      </div>
+    </body>`, 'text/html')
+
+    let opened = false
+    doc.getElementById('wrapper')!.addEventListener('focusin', () => {
+      opened = true
+      const list = doc.createElement('ul')
+      list.id = 'src-list'
+      list.setAttribute('role', 'listbox')
+      list.innerHTML = '<li role="option">Company career page</li>'
+      doc.body.appendChild(list)
+    })
+
+    const fields = collectFields(doc, { checkLayout: false })
+    void expandComboboxes(fields, 100)
+
+    expect(opened).toBe(true)
+  })
+
+  it('opens a menu wired to a delegated mousedown listener — the react-select pattern', () => {
+    // react-select's Control toggles its menu open on mousedown of the
+    // control, not on click or focus — a common pattern this codebase
+    // never simulated in a test before landing the M4.6 combobox fix, which
+    // is exactly why it passed jsdom tests but failed on the real page.
+    const doc = new DOMParser().parseFromString(`<body>
+      <div id="control" class="select__control">
+        <label for="src">How did you hear about CodePath?</label>
+        <input id="src" role="combobox" aria-controls="src-list">
+      </div>
+    </body>`, 'text/html')
+
+    let opened = false
+    doc.getElementById('control')!.addEventListener('mousedown', () => {
+      opened = true
+      const list = doc.createElement('ul')
+      list.id = 'src-list'
+      list.setAttribute('role', 'listbox')
+      list.innerHTML = '<li role="option">Company career page</li>'
+      doc.body.appendChild(list)
+    })
+
+    const fields = collectFields(doc, { checkLayout: false })
+    void expandComboboxes(fields, 100)
+
+    expect(opened).toBe(true)
+  })
 })

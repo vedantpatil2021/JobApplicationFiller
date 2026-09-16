@@ -80,6 +80,42 @@ silently filling the applicant's own name (M4.7 working as intended).
 The M4.8 guard stops it from reaching the page; finding *why* still needs
 live DOM access (M4.5).
 
+## M4.9 — comboboxes still didn't check real options at all
+
+A third round of screenshots from the same posting, after M4.8: "How did
+you hear about CodePath?" was filled with "Company career page" — not one
+of the field's real options — and "How would you describe your sexual
+orientation? (mark all that apply)" was filled with "Heterosexual /
+Straight" typed as loose text, when the real option is just "Heterosexual"
+in a click-to-select multi-value widget. Two fields (Hispanic/Latino, City)
+were correctly left empty rather than wrongly filled — the M4.7/M4.8
+plausibility guards working — but the underlying problem the user actually
+flagged was broader: **the extension still wasn't reading these dropdowns'
+real options before writing anything**, on the exact widgets these ATS
+demographic questions use.
+
+Root-caused without live DOM access (no browser was connected this
+session), grounded in two well-established, verifiable platform facts
+rather than another guess:
+
+| Root cause | Why the M4.6 fix didn't catch it | Fix |
+|---|---|---|
+| `expandComboboxes` dispatched `new Event('focus', {bubbles:true})` to open the control | Real browsers never bubble the plain `focus` event — only `focusin` does. React (and most component frameworks, including react-select, the near-universal multi-select widget for "mark all that apply" questions) delegate onFocus to a `focusin` listener on a root ancestor. A manually dispatched `focus` event is a different event type and never reaches that listener, regardless of `bubbles` | `openControl()` (new shared `content/dom-interact.ts`) dispatches a real `.focus()` call plus explicit `focus` and `focusin` events |
+| It dispatched only `click`, not `mousedown` | react-select's control toggles its menu open on `mousedown`, not `click` or `focus` | `openControl()` also dispatches a full `mousedown`/`mouseup`/`click` sequence |
+| Even when discovery *did* find real options, the actual fill step (`fillCombobox`) searched for the listbox assuming it was still open | Discovery closes the menu again when it's done peeking (`closeControl`) — by the time resolve/AI picks a value and `applyDecisions` runs, the listbox DOM nodes may no longer exist | `fillCombobox` now calls `openControl(el)` before searching for the option and `closeControl(el)` after, instead of assuming the earlier discovery peek left it open |
+
+Both `content/harvest/expand-combobox.ts` and `content/fill/setters.ts` now
+share the same `openControl`/`closeControl` from `content/dom-interact.ts`,
+so there is exactly one place that encodes how to open a custom dropdown.
+
+**Confidence level:** grounded in real, verifiable browser/React behavior
+(the non-bubbling nature of `focus`, react-select's documented `mousedown`
+handling) and covered by jsdom tests that specifically simulate a delegated
+`focusin` listener and a `mousedown`-triggered menu — the exact shape that
+was never tested before landing M4.6. **Still not verified against the
+actual live page** — no browser was connected this session. This is now the
+single most important thing for the M4.5 live-recon pass to confirm.
+
 ### Manual live test checklist
 
 Use this when a browser is available. Check each box and fill the tables below.
