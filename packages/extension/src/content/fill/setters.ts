@@ -92,7 +92,7 @@ export function fillSelect(el: HTMLSelectElement, value: string): boolean {
 }
 
 /** Click a listbox option when the combobox is wired to one via ARIA. */
-function clickListboxOption(el: HTMLInputElement, text: string): void {
+function clickListboxOption(el: HTMLInputElement, text: string): boolean {
   const root = el.getRootNode() as Document | ShadowRoot
   const target = norm(text)
 
@@ -104,11 +104,12 @@ function clickListboxOption(el: HTMLInputElement, text: string): void {
       for (const opt of lb.querySelectorAll('[role="option"]')) {
         if (norm(opt.textContent ?? '') === target) {
           (opt as HTMLElement).click()
-          return
+          return true
         }
       }
     }
   }
+  return false
 }
 
 /**
@@ -126,11 +127,12 @@ export function fillCombobox(el: HTMLInputElement, value: string, options: strin
   const picked = matchOption(value, options)
   if (!picked) return false
 
+  if (el.hasAttribute('list')) return fillText(el, picked)
+
   openControl(el)
-  setNativeValue(el, picked)
-  clickListboxOption(el, picked)
+  const selected = clickListboxOption(el, picked)
   closeControl(el)
-  return true
+  return selected
 }
 
 export function fillRadio(el: HTMLInputElement, value: string): boolean {

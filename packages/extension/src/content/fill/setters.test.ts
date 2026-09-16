@@ -72,6 +72,7 @@ describe('fillCombobox', () => {
         <li role="option">India</li><li role="option">United States</li>
       </ul>`)
     const input = doc.querySelector('input')!
+    doc.querySelector('[role="option"]')!.addEventListener('click', () => { input.value = 'India' })
     expect(fillCombobox(input, 'India', ['India', 'United States'])).toBe(true)
     expect(input.value).toBe('India')
   })
@@ -111,6 +112,14 @@ describe('fillCombobox', () => {
     expect(fillCombobox(input, 'India', ['India', 'United States'])).toBe(true)
 
     expect(clicked).toBe('India')   // the real option was actually clicked, not just typed
+  })
+
+  it('does not type into a custom combobox when reopening reveals no real option', () => {
+    const doc = parse('<input id="c" role="combobox" aria-controls="list">')
+    const input = doc.getElementById('c') as HTMLInputElement
+
+    expect(fillCombobox(input, 'India', ['India', 'United States'])).toBe(false)
+    expect(input.value).toBe('')
   })
 })
 
