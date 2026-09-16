@@ -72,6 +72,7 @@ describe('fillCombobox', () => {
         <li role="option">India</li><li role="option">United States</li>
       </ul>`)
     const input = doc.querySelector('input')!
+    doc.querySelector('[role="option"]')!.addEventListener('click', () => { input.value = 'India' })
     expect(fillCombobox(input, 'India', ['India', 'United States'])).toBe(true)
     expect(input.value).toBe('India')
   })
@@ -86,6 +87,39 @@ describe('fillCombobox', () => {
     const input = parse('<input aria-autocomplete="list">').querySelector('input')!
     expect(fillCombobox(input, 'Ada', [])).toBe(true)
     expect(input.value).toBe('Ada')
+  })
+
+  it('reopens the control before searching for the option — it may have been closed since discovery', () => {
+    // expandComboboxes discovers options and then closes the menu again
+    // (M4.9). If fillCombobox assumes the listbox is still in the DOM, it
+    // silently finds nothing and only the typed text (not a real
+    // selection) ends up on the page — the live-test finding this fixes.
+    const doc = parse('<input id="c" role="combobox" aria-controls="list">')
+    const input = doc.getElementById('c') as HTMLInputElement
+    let clicked = ''
+
+    input.addEventListener('mousedown', () => {
+      if (doc.getElementById('list')) return   // already open
+      const list = doc.createElement('ul')
+      list.id = 'list'
+      list.setAttribute('role', 'listbox')
+      list.innerHTML = '<li role="option">India</li><li role="option">United States</li>'
+      list.addEventListener('click', e => { clicked = (e.target as HTMLElement).textContent ?? '' })
+      doc.body.appendChild(list)
+    })
+
+    expect(doc.getElementById('list')).toBeNull()   // closed — the menu does not exist yet
+    expect(fillCombobox(input, 'India', ['India', 'United States'])).toBe(true)
+
+    expect(clicked).toBe('India')   // the real option was actually clicked, not just typed
+  })
+
+  it('does not type into a custom combobox when reopening reveals no real option', () => {
+    const doc = parse('<input id="c" role="combobox" aria-controls="list">')
+    const input = doc.getElementById('c') as HTMLInputElement
+
+    expect(fillCombobox(input, 'India', ['India', 'United States'])).toBe(false)
+    expect(input.value).toBe('')
   })
 })
 

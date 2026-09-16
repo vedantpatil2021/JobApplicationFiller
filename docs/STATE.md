@@ -4,20 +4,26 @@
 first and updates it last. If it disagrees with `git log`, git is right: fix
 this file.
 
-- **Last updated:** 2026-09-15 (M4.6/M4.7/logo merged+pushed; M4.8 green on
-  `fix/heuristic-coverage-gaps`, not yet merged)
-- **Branch:** `fix/heuristic-coverage-gaps` (not yet merged — see "Next up")
-- **Last commit:** see `git log --oneline -6`. `main` is at `5d0b891`
-  (M4.6/M4.7/logo, pushed). Do not push unless asked.
-- **Current milestone:** M4.6/M4.7 **done, merged, pushed**. M4.8 (a second
-  live-test screenshot: an M4.7 regression + real coverage gaps) **done,
-  green, not yet merged**. M4.5 (live recon) written but not yet run. M5
-  still blocked on live DOM in `docs/ats/findings.md`.
+- **Last updated:** 2026-09-16 (M4.6/M4.7/M4.8/logo merged+pushed; M4.9 green
+  on `fix/combobox-open-events`, not yet merged)
+- **Branch:** `fix/combobox-open-events` (not yet merged — see "Next up")
+- **Last commit:** see `git log --oneline -6`. `main` is at `bfea4f3`
+  (M4.6/M4.7/M4.8/logo, pushed). Do not push unless asked.
+- **Current milestone:** M4.6/M4.7/M4.8 **done, merged, pushed**. M4.9 (a
+  *third* live-test screenshot: comboboxes never actually opened, so options
+  were never read) **done, green, not yet merged, not yet live-verified —
+  no browser was connected this session**. M4.5 (live recon) written but
+  not yet run. M5 still blocked on live DOM in `docs/ats/findings.md`.
 - **Remote:** `origin` → github.com/vedantpatil2021/JobApplicationFiller
 - **Trunk:** `main`. Milestone work happens on its own branch, then merges to `main`.
 - **Plan in force:** `docs/superpowers/plans/2026-09-15-m4.5-live-recon.md`
-  (M4.7/M4.8 were bounded bug-fixing, root-caused in chat — no separate plan
-  files; see `docs/ats/findings.md` → "M4.7"/"M4.8" for the full record)
+  — **now more urgent than before**: M4.9 fixed the combobox-opening
+  mechanism using verified platform facts (React's focus/focusin, react-select's
+  mousedown-to-open) but has never been checked against the real page. Run
+  this before trusting M4.9 fully.
+  (M4.7/M4.8/M4.9 were bounded bug-fixing, root-caused in chat — no separate
+  plan files; see `docs/ats/findings.md` → "M4.7"/"M4.8"/"M4.9" for the full
+  record)
 
 ## Agent preferences
 

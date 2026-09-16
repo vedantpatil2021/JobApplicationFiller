@@ -193,6 +193,9 @@ describe('end-to-end fill', () => {
     const p = profile()
     p.applicant_profile.personal_information.address.country = 'India'
     const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+    doc.querySelector('[role="option"]')!.addEventListener('click', () => {
+      doc.querySelector<HTMLInputElement>('#c')!.value = 'India'
+    })
     const fields = collectFields(doc, { checkLayout: false })
     const { decisions } = resolveAll(fields.map(f => f.descriptor), p)
     applyDecisions(fields, decisions)
