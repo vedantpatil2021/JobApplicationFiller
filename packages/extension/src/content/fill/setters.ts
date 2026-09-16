@@ -95,20 +95,32 @@ export function fillSelect(el: HTMLSelectElement, value: string): boolean {
 function clickListboxOption(el: HTMLInputElement, text: string): boolean {
   const root = el.getRootNode() as Document | ShadowRoot
   const target = norm(text)
+  const clickMatchingOption = (listbox: Element): boolean => {
+    for (const opt of listbox.querySelectorAll('[role="option"]')) {
+      if (norm(opt.textContent ?? '') === target) {
+        (opt as HTMLElement).click()
+        return true
+      }
+    }
+    return false
+  }
 
   for (const attr of ['aria-controls', 'aria-owns'] as const) {
     const ids = el.getAttribute(attr)?.split(/\s+/) ?? []
     for (const id of ids) {
       const lb = root.querySelector(`[id="${escapeAttrValue(id)}"]`)
       if (!lb) continue
-      for (const opt of lb.querySelectorAll('[role="option"]')) {
-        if (norm(opt.textContent ?? '') === target) {
-          (opt as HTMLElement).click()
-          return true
-        }
-      }
+      if (clickMatchingOption(lb)) return true
     }
   }
+
+  // Greenhouse's react-select omits aria-controls while its menu is closed.
+  // After opening it, the sole visible listbox is the control's active menu.
+  const openListboxes = Array.from(root.querySelectorAll('[role="listbox"]')).filter(listbox =>
+    !listbox.hasAttribute('hidden') && listbox.getAttribute('aria-hidden') !== 'true',
+  )
+  if (openListboxes.length === 1) return clickMatchingOption(openListboxes[0])
+
   return false
 }
 

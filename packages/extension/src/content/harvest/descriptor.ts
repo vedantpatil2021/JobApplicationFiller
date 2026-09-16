@@ -70,8 +70,56 @@ function harvestListboxOptions(root: Document | ShadowRoot, ids: string): string
   return out
 }
 
+function greenhouseOptions(data: unknown, name: string): string[] {
+  if (Array.isArray(data)) {
+    for (const value of data) {
+      const found = greenhouseOptions(value, name)
+      if (found.length > 0) return found
+    }
+    return []
+  }
+
+  if (!data || typeof data !== 'object') return []
+  const record = data as Record<string, unknown>
+  if (Array.isArray(record.fields)) {
+    for (const field of record.fields) {
+      if (!field || typeof field !== 'object') continue
+      const candidate = field as Record<string, unknown>
+      if (candidate.name !== name || !Array.isArray(candidate.values)) continue
+      return candidate.values.flatMap(value => {
+        if (!value || typeof value !== 'object') return []
+        const label = (value as Record<string, unknown>).label
+        return typeof label === 'string' && clean(label) ? [clean(label)] : []
+      })
+    }
+  }
+
+  for (const value of Object.values(record)) {
+    const found = greenhouseOptions(value, name)
+    if (found.length > 0) return found
+  }
+  return []
+}
+
+/** Greenhouse embeds react-select choices in Remix page data before any menu is opened. */
+function harvestGreenhouseOptions(root: Document | ShadowRoot, name: string): string[] {
+  for (const script of root.querySelectorAll('script')) {
+    const text = script.textContent?.trim() ?? ''
+    const match = /^window\.__remixContext\s*=\s*([\s\S]*?);?$/.exec(text)
+    if (!match) continue
+    try {
+      const found = greenhouseOptions(JSON.parse(match[1]), name)
+      if (found.length > 0) return found
+    } catch {
+      // A malformed third-party bootstrap must not prevent normal harvesting.
+    }
+  }
+  return []
+}
+
 function harvestOptions(el: HTMLElement, kind: FieldKind): string[] {
   const root = el.getRootNode() as Document | ShadowRoot
+  const input = el as HTMLInputElement
 
   if (kind === 'select') {
     return Array.from((el as HTMLSelectElement).options)
@@ -97,6 +145,10 @@ function harvestOptions(el: HTMLElement, kind: FieldKind): string[] {
   for (const attr of ['aria-controls', 'aria-owns'] as const) {
     const ids = el.getAttribute(attr)
     if (ids) options.push(...harvestListboxOptions(root, ids))
+  }
+
+  if (options.length === 0 && el.matches('input.select__input') && input.name) {
+    options.push(...harvestGreenhouseOptions(root, input.name))
   }
 
   return [...new Set(options)]

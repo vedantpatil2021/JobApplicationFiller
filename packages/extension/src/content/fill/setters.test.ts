@@ -114,6 +114,23 @@ describe('fillCombobox', () => {
     expect(clicked).toBe('India')   // the real option was actually clicked, not just typed
   })
 
+  it('selects from a react-select listbox that is not linked by aria-controls', () => {
+    const doc = parse('<input id="question_32522076003" class="select__input" role="combobox">')
+    const input = doc.querySelector('input') as HTMLInputElement
+    let clicked = ''
+
+    input.addEventListener('mousedown', () => {
+      const list = doc.createElement('div')
+      list.setAttribute('role', 'listbox')
+      list.innerHTML = '<div role="option">Affirm’s Career Site</div>'
+      list.addEventListener('click', event => { clicked = (event.target as HTMLElement).textContent ?? '' })
+      doc.body.appendChild(list)
+    })
+
+    expect(fillCombobox(input, 'Affirm’s Career Site', ['Affirm’s Career Site'])).toBe(true)
+    expect(clicked).toBe('Affirm’s Career Site')
+  })
+
   it('does not type into a custom combobox when reopening reveals no real option', () => {
     const doc = parse('<input id="c" role="combobox" aria-controls="list">')
     const input = doc.getElementById('c') as HTMLInputElement
