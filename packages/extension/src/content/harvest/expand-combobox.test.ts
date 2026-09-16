@@ -126,4 +126,21 @@ describe('expandComboboxes', () => {
 
     expect(opened).toBe(true)
   })
+
+  it('opens a menu from ArrowDown when pointer events are rejected', () => {
+    const doc = new DOMParser().parseFromString(`<body>
+      <label for="src">How did you hear about CodePath?</label>
+      <input id="src" role="combobox">
+    </body>`, 'text/html')
+
+    let opened = false
+    doc.getElementById('src')!.addEventListener('keydown', event => {
+      if (event.key === 'ArrowDown') opened = true
+    })
+
+    const fields = collectFields(doc, { checkLayout: false })
+    void expandComboboxes(fields, 100)
+
+    expect(opened).toBe(true)
+  })
 })

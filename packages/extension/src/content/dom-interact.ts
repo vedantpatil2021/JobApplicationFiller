@@ -27,6 +27,9 @@ export function openControl(el: HTMLElement): void {
   for (const type of ['mousedown', 'mouseup', 'click'] as const) {
     el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, composed: true }))
   }
+  el.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowDown', bubbles: true, cancelable: true, composed: true,
+  }))
 }
 
 /** Closing is best-effort tidiness — a stray open menu affects nothing downstream but looks wrong. */

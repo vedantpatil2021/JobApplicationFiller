@@ -116,6 +116,32 @@ was never tested before landing M4.6. **Still not verified against the
 actual live page** — no browser was connected this session. This is now the
 single most important thing for the M4.5 live-recon pass to confirm.
 
+## M4.10 — live Greenhouse verification: real options are present; synthetic opening still fails
+
+**Live-verified 2026-09-16** on [Affirm's Software Engineer II, Backend
+(Post-Transaction) application](https://job-boards.greenhouse.io/affirm/jobs/7981803003),
+opened in Chrome with the locally built, paired extension. The form is a real
+Greenhouse/Remix page using react-select inputs (`input.select__input`,
+`role="combobox"`). A real browser click on “How did you first learn about
+Affirm as an employer?” immediately rendered a single `role="listbox"` with
+21 real options, including “Affirm’s Career Site”, “LinkedIn”, and “Other”.
+
+| Check | Live outcome |
+|---|---|
+| Built extension loads and shows its Fill application control | pass |
+| First name, last name, email, phone, LinkedIn, GitHub, portfolio, preferred name, name pronunciation | filled (9 fields total) |
+| Submit application | not clicked; the review panel explicitly states that submission remains manual |
+| Greenhouse react-select choices | fail: Country, sponsorship, state, race, veteran status, disability, pronouns, gender identity, gender, and Hispanic/Latino each reported `no matching option` despite the page exposing real choices |
+| Referral-source choice | not typed; correctly left `needs-user` because profile value “Company career page” is not one of the live options |
+
+The M4.10 implementation now harvests Greenhouse's embedded
+`window.__remixContext` form data, including multiline bootstraps, instead of
+waiting for an untrusted synthetic event to reveal a menu. It also tests the
+ARIA-less active-listbox path used by react-select. The live page still did not
+open a listbox from the extension's synthetic mouse sequence; this is the
+remaining blocker. An `ArrowDown` opening fallback is covered by jsdom but
+needs a follow-up browser pass before it may be called live-verified.
+
 ### Manual live test checklist
 
 Use this when a browser is available. Check each box and fill the tables below.

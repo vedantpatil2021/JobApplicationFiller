@@ -67,6 +67,35 @@ describe('descriptor shape', () => {
     const html = `<input list="states"><datalist id="states"><option>CA</option><option>NY</option></datalist>`
     expect(first(html).options).toEqual(['CA', 'NY'])
   })
+
+  it('harvests Greenhouse react-select options embedded in the Remix page data', () => {
+    const d = parse('<label for="question_32522076003">How did you first learn about us?</label><input id="question_32522076003" name="question_32522076003" class="select__input" role="combobox">')
+    const data = {
+      state: {
+        loaderData: {
+          job: {
+            questions: [{
+              fields: [{
+                name: 'question_32522076003',
+                values: [
+                  { value: 168980542003, label: 'Affirm blog' },
+                  { value: 168980544003, label: 'Affirm’s Career Site' },
+                  { value: 168980562003, label: 'Other' },
+                ],
+              }],
+            }],
+          },
+        },
+      },
+    }
+    const script = d.createElement('script')
+    script.textContent = `window.__remixContext = ${JSON.stringify(data, null, 2)};`
+    d.body.appendChild(script)
+
+    expect(describeField(d.querySelector('input') as HTMLElement, 'r0').options).toEqual([
+      'Affirm blog', 'Affirm’s Career Site', 'Other',
+    ])
+  })
 })
 
 describe('collectFields', () => {
