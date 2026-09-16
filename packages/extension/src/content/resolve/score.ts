@@ -11,6 +11,19 @@ export const LOW = 0.65
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
 const tokens = (s: string) => new Set(norm(s).split(' ').filter(Boolean))
 
+/**
+ * Single words too generic to trust as strong evidence on their own — "name"
+ * appears in plenty of unrelated questions (a referrer's name, an emergency
+ * contact's name), unlike a specific single word like "transgender" or
+ * "veteran" that only ever means one thing on a job application. These stay
+ * on the weaker, label-coverage fallback below instead of the strong
+ * substring-match path (M4.7 finding — "name" filled a conditional referral
+ * question with the applicant's own name; M4.8 found the same rule applied
+ * to every single-word synonym had wrongly demoted transgender/veteran/
+ * disability questions too).
+ */
+const GENERIC_SYNONYMS = new Set(['name', 'date', 'state', 'address', 'status', 'source'])
+
 const CHOICE_KINDS = new Set<FieldKind>(['select', 'radio', 'combobox'])
 
 function hasChoiceOptions(d: FieldDescriptor): boolean {
@@ -46,13 +59,10 @@ function scoreAgainst(d: FieldDescriptor, f: CanonicalField): number {
   for (const syn of f.synonyms) {
     const s = norm(syn)
     if (label === s) { best = Math.max(best, 0.95); continue }
-    // A multi-word synonym is specific enough that a plain substring match is
-    // strong evidence. A single generic word (e.g. "name", "city") appearing
-    // anywhere in a longer, unrelated question is not — a live-test finding
-    // (M4.7) showed this filled a conditional "please list their name"
-    // referral question with the applicant's own full name. Single-word
-    // synonyms still get a chance below, via identity and weak token overlap.
-    if (s.includes(' ') && label.includes(s)) {
+    // A plain substring match is strong evidence UNLESS the synonym is one
+    // of the handful of words too generic to trust on their own — those
+    // fall through to the weaker, label-coverage fallback below instead.
+    if (!GENERIC_SYNONYMS.has(s) && label.includes(s)) {
       // A long synonym covering most of the label is stronger evidence than a
       // short one buried in a long question. Weight by coverage so the best
       // synonym wins on merit rather than on registry order.

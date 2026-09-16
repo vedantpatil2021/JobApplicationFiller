@@ -27,3 +27,25 @@ export function isImplausibleYesNoAnswer(label: string, value: string): boolean 
   if (!trimmed) return false
   return YES_NO_LABEL.test(label) && !YES_NO_VALUE.test(trimmed)
 }
+
+/** An ISO date value (YYYY-MM-DD), the shape every date field in this app writes. */
+const ISO_DATE_VALUE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Labels that plausibly ask for a date, so an ISO-shaped value is expected. */
+const DATE_LABEL_HINT = /\b(date|when|start|available|availability|deadline|birth|dob)\b/i
+
+/**
+ * An ISO-date-shaped value going into a field whose label has nothing to do
+ * with dates is almost certainly a mismatch. Live-test finding (M4.8): a
+ * "Location (City)" field got e_signature.date's value verbatim — confirmed
+ * against the actual profile.yaml, which held the exact same date string.
+ * The precise mechanism (resolver mismatch, a misclassified control, or a
+ * harvesting label mixup) wasn't found without live DOM, but whatever
+ * produced it, a date has no business in a city field — refuse it the same
+ * way isImplausibleYesNoAnswer refuses a place name in a yes/no field.
+ */
+export function isImplausibleDateAnswer(label: string, value: string): boolean {
+  const trimmed = value.trim()
+  if (!trimmed) return false
+  return ISO_DATE_VALUE.test(trimmed) && !DATE_LABEL_HINT.test(label)
+}

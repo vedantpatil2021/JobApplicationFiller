@@ -4,7 +4,7 @@ import { escapeAttrValue } from '../../lib/selector.js'
 import { isFillable } from '../harvest/visibility.js'
 import { isSubmitControl } from './guard.js'
 import { fillText, fillSelect, fillRadio, fillCheckbox, fillCombobox } from './setters.js'
-import { isImplausibleYesNoAnswer } from './plausibility.js'
+import { isImplausibleYesNoAnswer, isImplausibleDateAnswer } from './plausibility.js'
 
 /** What we wrote, so a re-fill can tell our value from the user's edit. */
 const written = new WeakMap<HTMLElement, string>()
@@ -57,14 +57,17 @@ export function applyDecisions(fields: HarvestedField[], decisions: FillDecision
       return { ...base, outcome: 'skipped', note: 'already has a value' }
     }
 
-    // A yes/no-phrased label about to get a non-yes/no value is very likely a
+    // A yes/no-phrased label about to get a non-yes/no value, or a date value
+    // about to land in a label that isn't about dates, is very likely a
     // mismatch, wherever it came from — defer to the user rather than write
-    // something that reads as nonsense on the real page (M4.7 finding).
-    if (
-      (descriptor.kind === 'text' || descriptor.kind === 'textarea' || descriptor.kind === 'combobox') &&
-      isImplausibleYesNoAnswer(descriptor.label, d.value)
-    ) {
-      return { ...base, outcome: 'needs-user', note: 'this looks like a yes/no question — please answer it yourself' }
+    // something that reads as nonsense on the real page (M4.7/M4.8 findings).
+    if (descriptor.kind === 'text' || descriptor.kind === 'textarea' || descriptor.kind === 'combobox') {
+      if (isImplausibleYesNoAnswer(descriptor.label, d.value)) {
+        return { ...base, outcome: 'needs-user', note: 'this looks like a yes/no question — please answer it yourself' }
+      }
+      if (isImplausibleDateAnswer(descriptor.label, d.value)) {
+        return { ...base, outcome: 'needs-user', note: 'this does not look like a date question — please check and answer it yourself' }
+      }
     }
 
     let ok = false

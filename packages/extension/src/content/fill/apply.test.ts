@@ -227,4 +227,29 @@ describe('end-to-end fill', () => {
     expect(results[0]?.outcome).toBe('filled')
     expect(doc.querySelector<HTMLInputElement>('#eeo')!.value).toBe('No')
   })
+
+  it('refuses to write a date value into a field whose label is not about dates — live-test finding', () => {
+    const html = '<label for="city">Location (City)</label><input id="city">'
+    const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+    const fields = collectFields(doc, { checkLayout: false })
+    const results = applyDecisions(fields, [{
+      ref: fields[0].descriptor.ref,
+      value: '2026-09-14', confidence: 0.9, source: 'heuristic', canonicalKey: 'signature_date', reason: 'test',
+    }])
+    expect(results[0]?.outcome).toBe('needs-user')
+    expect(doc.querySelector<HTMLInputElement>('#city')!.value).toBe('')
+    expect(results[0]?.note).toMatch(/date/i)
+  })
+
+  it('still fills a genuine date question with a date value', () => {
+    const html = '<label for="start">Earliest available start date</label><input id="start">'
+    const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+    const fields = collectFields(doc, { checkLayout: false })
+    const results = applyDecisions(fields, [{
+      ref: fields[0].descriptor.ref,
+      value: '2026-09-14', confidence: 0.9, source: 'heuristic', canonicalKey: 'signature_date', reason: 'test',
+    }])
+    expect(results[0]?.outcome).toBe('filled')
+    expect(doc.querySelector<HTMLInputElement>('#start')!.value).toBe('2026-09-14')
+  })
 })
